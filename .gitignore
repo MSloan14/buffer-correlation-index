@@ -1,0 +1,61 @@
+# ---------------------------------------------------------------------------
+# NOTE ON SCOPE
+#
+# data/ and scripts/ are deliberately NOT ignored. Every input and every line of
+# analysis code is committed, because a pre-registration whose data or code is
+# missing cannot be audited. Only credentials, caches, and local cruft go here.
+# ---------------------------------------------------------------------------
+
+# --- Credentials and secrets -----------------------------------------------
+.env
+.env.*
+!.env.example
+.netrc
+.npmrc
+credentials.json
+secrets.json
+service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.token
+*_token
+*_secret
+api_key*
+
+# --- Python caches and build artifacts -------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+ENV/
+
+# --- Editor cruft ----------------------------------------------------------
+.vscode/
+.idea/
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# --- OS cruft --------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
