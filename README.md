@@ -42,9 +42,25 @@ _Not yet written._
 | [`scripts/fetch/`](scripts/fetch/) | Retrieval code. What produced `data/raw/`. |
 | [`scripts/analysis/`](scripts/analysis/) | Analysis code implementing the frozen specification. |
 | [`results/`](results/) | Outputs. Everything here is generated after the freeze. |
+| [`DATA_TERMS.md`](DATA_TERMS.md) | Redistribution status per source, and what may be committed for each. |
+| [`CHECKSUMS.sha256`](CHECKSUMS.sha256) | SHA-256 record of `prereg/`, written at freeze time. Regenerate or check with [`scripts/checksums.py`](scripts/checksums.py). |
+| [`REVIEWER-NOTES.md`](REVIEWER-NOTES.md) | Known limitations, disclosed before data contact. **Not part of the pre-registration.** |
 
 Data and scripts are **committed deliberately**, not ignored. An audit trail that omits the inputs
-or the code is not an audit trail.
+or the code is not an audit trail. The one exception is proprietary data that cannot be redistributed;
+see [`DATA_TERMS.md`](DATA_TERMS.md) for what is committed in its place and what that costs.
+
+## Licensing
+
+This repository is dual-licensed, because code and prose want different terms:
+
+| What | Licence | File |
+|---|---|---|
+| Software — everything under [`scripts/`](scripts/), and any other source code | **MIT** | [`LICENSE`](LICENSE) |
+| Prose and outputs — [`prereg/`](prereg/), [`results/`](results/), and documentation | **CC BY 4.0** | [`LICENSE-DOCS`](LICENSE-DOCS) |
+
+Third-party data under [`data/`](data/) is covered by **neither**. Each series carries the terms of
+its own source, recorded in [`DATA_TERMS.md`](DATA_TERMS.md).
 
 ## How to verify the timestamp
 

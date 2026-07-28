@@ -1,0 +1,11 @@
+# Normalize line endings so that a file's bytes in the repository are identical
+# regardless of the operating system it was committed from. This matters here
+# because checksums over prereg/ are part of the audit trail: without this, the
+# same logical file can hash differently on Windows and Linux.
+
+* text=auto eol=lf
+*.csv text eol=lf
+*.md text eol=lf
+
+# Generated plots must never be line-ending converted.
+*.png binary
