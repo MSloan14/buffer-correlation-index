@@ -57,27 +57,50 @@ The frozen design (C-A) has **LR- = 0.83**: a disconfirmation shifts the odds
 against the hypothesis by about a sixth. C-D is worse at 0.85. Both sit at or
 past the threshold the design brief identified as not worth pre-committing to.
 
-## Calibration is the sharpest separator
+## Calibration: what the false-positive rate is actually measuring
 
-| Candidate | FPR at true zero |
-|---|---|
-| C-D (annual trend) | **0.099** |
-| C-E (quarterly trend) | 0.108 |
-| C-F (count trend) | 0.111 |
-| C-C (quarterly endpoint, 1990) | 0.127 |
-| C-B (quarterly endpoint, 2001) | 0.156 |
-| C-A (frozen) | **0.186** |
+> **Revised 2026-07-28 after independent verification.** An earlier draft ranked
+> the candidates on their false-positive rate and called calibration "the
+> sharpest separator". That was wrong, and the error mattered: the rate at true
+> zero conflates two unrelated things — how well the *inference* is calibrated,
+> and how much crisis contamination the *design* admits. Separating them
+> reverses part of the conclusion.
 
-The three **trend** statistics are essentially exactly calibrated. The three
-**endpoint-contrast** statistics are all anti-conservative, and the frozen design
-worst of all.
+Re-running each candidate at a true zero with the crisis elevation switched off
+isolates the test's actual size:
 
-This is not a coincidence of construction. The endpoint contrast inherits both
-problems documented in the reviewer notes: a moving-block bootstrap with 3-4
-blocks per side, and one-sided crisis leakage into B3ex. The trend statistics
-use every window, so they have far more blocks, and their bootstrap-null
-construction is valid by design. **C-A's excess false-positive rate is roughly
-double C-D's, on the same data, from the same 8 domains.**
+| Candidate | Reported FPR at zero | **True size** | Leak contribution |
+|---|---|---|---|
+| C-D (annual trend) | 0.099 | **0.098** | +0.001 |
+| C-E (quarterly trend) | 0.108 | **0.105** | +0.003 |
+| C-F (count trend) | 0.111 | **0.113** | −0.002 |
+| C-C (quarterly endpoint, 1990) | 0.127 | **0.116** | +0.011 |
+| C-B (quarterly endpoint, 2001) | 0.156 | **0.136** | +0.020 |
+| C-A (frozen) | 0.186 | **0.118** | **+0.068** |
+
+Monte Carlo standard error is about 0.007–0.008 throughout.
+
+Three consequences, none of which the earlier draft stated:
+
+- **C-A, C-C and C-F have statistically indistinguishable true size** (0.118,
+  0.116, 0.113). The headline spread from 0.186 down to 0.127 is *almost
+  entirely* how much crisis contamination each design admits — 1 of 6
+  observations in C-A's late block, 1 of 24 in C-B's, 1 of 36 in C-C's.
+- **"C-C is better calibrated than C-A" is an artefact.** Their true sizes are
+  the same to within a quarter of a standard error. The calibration axis
+  therefore provides **no support whatever** for narrowing to four domains.
+- **More blocks bought nothing.** An earlier draft explained the endpoint/trend
+  gap as the trend statistics "having far more blocks". That explanation does
+  not survive: C-C has 49 and 33 distinct blocks against C-A's 6 and 5, and is
+  no better calibrated. Whatever drives the residual gap, it is not block count.
+
+The genuine endpoint-versus-trend difference is real but modest: roughly
+0.116–0.136 against 0.098–0.113. The trend statistics are close to nominal; the
+endpoint contrasts run 2–4 points hot regardless of sample size.
+
+**The practical implication points at the exclusion rule, not the design.** C-A's
+excess over nominal is 0.086, of which 0.068 is leakage — a fixable property of
+how crisis years are excluded, not a property of the endpoint contrast.
 
 ## Candidate by candidate, in plain language
 
@@ -150,24 +173,74 @@ its 11.8% baseline. **A high count restates known depletion. Only a rising trend
 in the count is new information**, and C-F correctly reports no trend when there
 is none.
 
-### D2 — synchronized drift is detected, but less efficiently
+**Read the next section before taking D1 as reassurance.** The word doing the
+work above is *constant*.
+
+### D1b — a shared drift with curvature IS read as co-movement
+
+D1 holds only for a drift that is constant, because differencing annihilates a
+constant. It does **not** annihilate a drift with curvature: the first difference
+of a curved path varies over time, and it is identical across every domain —
+which is the definition of a common factor.
+
+Simulating a shared, deterministic, accelerating depletion path, identical in
+every domain, with fully independent noise and **no change whatsoever in genuine
+co-movement**:
+
+| Curvature of the shared path | Realized Δρ | Confirm rate |
+|---|---|---|
+| 0 (linear) | +0.001 | 0.129 |
+| 1 | +0.026 | 0.143 |
+| 2 | +0.082 | 0.169 |
+| 3 | +0.166 | 0.216 |
+| 5 | **+0.358** | **0.330** |
+
+A second mechanism compounds it. The late block spans a wider index range than
+the early one (2018–2025 with gaps, versus 2001–2007), so a shared component
+whose variance grows over time contributes more variance to B3ex than to B1ex.
+**The contrast comes out positive by construction**, before any real co-movement
+exists.
+
+**This is a confounder, not a power problem, and that distinction is the whole
+point.** Every other limitation in this document is curable in principle by more
+data or a better exclusion rule. This one is not: the statistic cannot separate
+"the deviations around the trend became more correlated" from "the shared trend
+became more curved." A system in which every buffer drains at an *accelerating*
+rate — arguably the most natural reading of the thesis as stated — produces a
+positive contrast with no rise in co-movement at all. More observations would
+estimate the confounded quantity more precisely. They would not disentangle it.
+
+*Found by the independent verification pass, not by the primary simulation, and
+reproduced here.*
+
+### D2 — synchronized drift is detected, at modestly lower power
 
 Simulating a regime where the drift itself becomes synchronized in the late
-block — persistent common shocks to the depletion rate, noise still independent:
+block — persistent (AR(1)) common shocks to the depletion rate, noise still
+independent. Both arms run with the crisis elevation off, and the table reports
+the **realized** contrast, not the nominal parameter:
 
-| Induced delta rho | Power, synchronized drift | Power, plain equicorrelation |
-|---|---|---|
-| 0.10 | 0.228 | 0.295 |
-| 0.15 | **0.248** | 0.326 |
-| 0.20 | 0.292 | 0.396 |
-| 0.30 | 0.377 | 0.537 |
+| Nominal | Synchronized drift | | Plain equicorrelation | |
+|---|---|---|---|---|
+| | realized Δρ | power | realized Δρ | power |
+| 0.10 | 0.052 | 0.163 | 0.087 | 0.216 |
+| 0.15 | 0.084 | 0.184 | 0.141 | 0.284 |
+| 0.20 | 0.122 | 0.237 | 0.186 | 0.338 |
+| 0.30 | 0.197 | 0.307 | 0.271 | 0.437 |
 
-**Yes, the frozen statistic detects synchronized drift** — but at roughly 25-30%
-lower power than an equivalent rise in contemporaneous correlation. The
-persistence of the common component is serial dependence, which widens the block
-bootstrap and makes short blocks noisier. So the mechanism most naturally
-described as "shared shocks to how fast buffers drain" is detected *worse* than
-the abstract correlation rise the design was powered against.
+**Yes, the frozen statistic detects synchronized drift.** Compared at *matched
+realized effect* — interpolating the equicorrelation curve — the deficit is
+roughly **10–14%**, not the 25–30% an earlier draft reported.
+
+> **Revised 2026-07-28 after independent verification.** The earlier figure
+> compared the two arms at equal *nominal* parameters, which are not equal
+> effects: a persistent common component is largely absorbed by within-block
+> centring, so a parameter solved to induce 0.10 per observation realizes as
+> about 0.05 in the block contrast. Comparing 0.248 against 0.326 was therefore
+> comparing two different effect sizes and roughly doubled the apparent deficit.
+> The earlier draft also attributed the gap to persistence "widening the block
+> bootstrap"; that mechanism is wrong. The correct one is within-block absorption
+> of a persistent common mean — a white common shock shows no deficit at all.
 
 ## C-F: what it can and cannot distinguish
 
@@ -228,9 +301,18 @@ Stated as plainly as the evidence allows:
    rather than two endpoints. It is a better instrument. It is still
    underpowered.
 
-4. **Two findings are independent of power and would survive any redesign:** a
-   constant common drift is invisible to this statistic (D1), and the crisis
-   exclusion rule as written biases toward confirmation (reviewer notes item 5).
+4. **Three findings are independent of power and would survive any redesign:** a
+   constant common drift is invisible to this statistic (D1), a *curved* shared
+   drift is actively mistaken for co-movement (D1b), and the crisis exclusion
+   rule as written biases toward confirmation (reviewer notes item 5).
+
+**D1b is the finding most likely to matter.** A redesign can buy power, fix the
+exclusion rule, and improve calibration. None of that separates a shared
+accelerating drain from rising co-movement. Any revised specification should
+address that confounder explicitly — by detrending the shared component,
+modelling it, or narrowing the claim to what the statistic can actually
+identify — because a confirmation from a design that cannot distinguish the two
+would not mean what the thesis needs it to mean.
 
 The publishable finding, if the decision goes that way, is **"not testable at
 adequate power with available annual series"** — which the design brief already
@@ -240,20 +322,40 @@ identifies as legitimate. Nothing in these results contradicts it.
 
 | File | Contents |
 |---|---|
-| `summary.json` | Everything machine-readable: seed, environment, layout, all curves, LRs, diagnostics. |
+| `summary.json` | Everything machine-readable: seed, environment, layout, all curves, LRs, diagnostics, per-candidate true size. |
 | `power_curves.csv` | Power at each effect size for every candidate. |
-| `candidate_summary.csv` | The comparison table above. |
+| `candidate_summary.csv` | The comparison table above, plus true size and leak contribution. |
 | `cf_drift_axis.csv` | C-F on its own effect axis. |
-| `d2_sync_drift.csv` | Synchronized-drift diagnostic. |
+| `d2_sync_drift.csv` | Synchronized-drift diagnostic, on realized effects. |
+| `d1b_shared_curved_drift.csv` | The curvature confounder. |
+
+> A note on the CSVs, since it bears on whether they can be trusted. Until
+> 2026-07-28 these were written by joining fields on commas by hand, and two
+> candidate labels contain commas — so the C-B and C-C rows of
+> `candidate_summary.csv` carried more fields than the header and mis-parsed
+> under any standard reader, with the false-positive column reading as the MDE.
+> The rendered tables and `summary.json` were unaffected. Found by the
+> independent verification pass; the writer now uses `csv.writer` and the files
+> here are regenerated.
 
 ## Assumptions
 
-Identical to the frozen-design simulation and documented in
+Shared with the frozen-design simulation and documented in
 [`../power-simulation/README.md`](../power-simulation/README.md): baseline mean
 pairwise correlation 0.20, crisis elevation +0.35, equicorrelation factor
 structure, no serial dependence in the baseline DGP, percentile bootstrap
-interval, rolling window 8 years (32 quarters), annual block length 2 and
-quarterly 4.
+interval, annual block length 2 and quarterly 4.
+
+**One assumption is deliberately not shared, and an earlier draft wrongly called
+the two simulations identical.** The rolling window differs by design:
+
+| | Rolling window | Why |
+|---|---|---|
+| Frozen-design simulation (C4's Mann–Kendall leg) | **10 years** | Spec v0.2 §5 specifies trailing 10-year windows; 8-year is robustness run S6 |
+| C-D and C-E here | **8 years** (32 quarters) | The candidate brief specifies an 8-year rolling window for the trend statistic |
+
+Both are intentional and each is correct for its own purpose, but they are not
+the same number and the documents should not have implied otherwise.
 
 Quarterly candidates are given the **same delta rho** as annual ones. That is
 favourable to them: it assumes a quarterly co-movement shift of the same

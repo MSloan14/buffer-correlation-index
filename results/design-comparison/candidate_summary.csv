@@ -1,7 +1,7 @@
 candidate,label,power_010,power_015,power_020,mde80,fpr_at_zero,true_size_no_crisis,leak_contribution,nominal_alpha,lr_confirm_at_015,lr_disconfirm_at_015,meets_80_at_015
-C-A,frozen annual 8-domain endpoint contrast,,0.325000,,,0.100000,0.175000,-0.075000,0.100000,3.250000,0.750000,False
-C-B,"quarterly 4-domain endpoint contrast, 2001-2026",,0.400000,,,0.200000,0.150000,0.050000,0.100000,2.000000,0.750000,False
-C-C,"quarterly 4-domain endpoint contrast, 1990-2026",,0.550000,,,0.200000,0.175000,0.025000,0.100000,2.750000,0.562500,False
-C-D,annual 8-domain rolling-window trend,,0.200000,,,0.175000,0.150000,0.025000,0.100000,1.142857,0.969697,False
-C-E,quarterly 4-domain rolling-window trend,,0.325000,,,0.250000,0.225000,0.025000,0.100000,1.300000,0.900000,False
-C-F,co-depletion: trend in count of falling domains,,0.050000,,,0.275000,0.125000,0.150000,0.100000,0.181818,1.310345,False
+C-A,frozen annual 8-domain endpoint contrast,0.295000,0.326000,0.395500,0.529524,0.186000,0.118500,0.067500,0.100000,1.752688,0.828010,False
+C-B,"quarterly 4-domain endpoint contrast, 2001-2026",0.316500,0.471000,0.570000,0.295436,0.156000,0.136000,0.020000,0.100000,3.019231,0.626777,False
+C-C,"quarterly 4-domain endpoint contrast, 1990-2026",0.376500,0.556000,0.684500,0.252144,0.127000,0.116000,0.011000,0.100000,4.377953,0.508591,False
+C-D,annual 8-domain rolling-window trend,0.208000,0.238500,0.303500,0.589407,0.098500,0.097500,0.001000,0.100000,2.421320,0.844703,False
+C-E,quarterly 4-domain rolling-window trend,0.268500,0.379000,0.477500,0.337895,0.108000,0.105500,0.002500,0.100000,3.509259,0.696188,False
+C-F,co-depletion: trend in count of falling domains,0.125000,0.115000,0.104500,,0.110500,0.113000,-0.002500,0.100000,1.040724,0.994941,False
