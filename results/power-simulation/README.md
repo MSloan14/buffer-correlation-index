@@ -51,20 +51,20 @@ B3ex of 6; headline contrast `delta_rho = rhobar(B3ex) - rhobar(B1ex)`;
 inference by moving-block bootstrap with block length 2 and 5,000 replications
 at a one-sided 90 percent bound.
 
-### Calendar layout
+### Calendar layout (authoritative)
 
-The spec fixes the block sizes and gives two worked leakage examples
-(`delta_2010 = z2010 - z2009`, `delta_2022 = z2022 - z2021`). It does not state
-the calendar layout outright. The layout used here is the one consistent with
-all of that, and it is an assumption:
+Supplied by the design author on 2026-07-28. This is **not** an assumption; it
+supersedes a layout previously inferred here, which was wrong.
 
-- differences span 2004–2023
-- B1 window gives differences 2004–2012; B3 window gives 2016–2023
-- crisis years 2008, 2009, 2020, 2021
-- excluding by year **label**: B1ex = 2004–2007, 2010–2012 (**7**);
-  B3ex = 2016–2019, 2022–2023 (**6**)
-- the differences that leak are exactly `delta_2010` and `delta_2022`, matching
-  the two stated examples
+- difference sample **2001–2026** (26 observations)
+- thirds: **B1 = 2001–2009 (9)**, **B2 = 2010–2017 (8)**, **B3 = 2018–2026 (9)**
+- crisis set **E = {2008, 2009, 2020, 2021, 2026}**; 2001 deliberately not in E
+- excluding by year **label**: **B1ex = 2001–2007 (7)**,
+  **B2ex = 2010–2017 (8)**, **B3ex = {2018, 2019, 2022, 2023, 2024, 2025} (6)**
+- the differences that leak are `delta_2010` and `delta_2022`. Crucially,
+  **`delta_2010` lands in B2**, which bears on nothing in the headline contrast,
+  while **`delta_2022` lands in B3ex**. Contamination is one-sided and does not
+  cancel — this is what drives item 5 of the reviewer notes.
 
 ### Assumptions that are not in the spec
 
@@ -83,12 +83,18 @@ soft spot in the exercise:
 | Bootstrap interval type | percentile | The spec fixes the scheme, replication count, and level, but not which interval to construct. |
 
 The leakage experiment carries a control that matters for reading it. Label
-exclusion leaves blocks of 7 and 6; clean exclusion leaves 6 and 5. Because
+exclusion leaves blocks of 7 and 6; clean exclusion leaves 7 and 5. Because
 Pearson correlations attenuate more at smaller *n*, comparing the two directly
-confounds contamination with a sample-size artifact. Each condition is therefore
-re-run with the crisis elevation switched off, isolating the artifact, and net
-leakage is reported as the difference. The raw and controlled figures differ
-enough to reverse the conclusion; see item 5 of the reviewer notes.
+would confound contamination with a sample-size artifact. Each condition is
+therefore re-run with the crisis elevation switched off, isolating the artifact,
+and net leakage is reported as the difference. Under the authoritative layout
+the artifact turns out to be small and the leakage large; see item 5 of the
+reviewer notes.
+
+The coverage experiment is likewise run twice, with and without crisis
+elevation, so that the false-positive rate can be split into a small-sample
+bootstrap component and a leakage component. They are different problems with
+different remedies, and a single headline rate hides that.
 
 **The serial-dependence point is important and cuts against the design.** The
 simulated differences are independent across years, which is the most

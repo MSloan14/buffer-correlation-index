@@ -58,21 +58,30 @@ DIRICHLET_SIGN_THRESHOLD = 0.90
 ROLLING_WINDOW = 7                               # for the C4 Mann-Kendall series
 
 # --------------------------------------------------------------------------
-# Year layout
+# Year layout -- CORRECTED 2026-07-28
 #
-# The frozen spec fixes the block SIZES (B1ex = 7, B3ex = 6) and gives two
-# worked examples of leakage (delta_2010 = z2010 - z2009, delta_2022 = z2022 -
-# z2021). It does not state the calendar layout outright. The layout below is
-# the instantiation consistent with both: it reproduces the two stated block
-# sizes exactly and both stated leakage examples. It is recorded here rather
-# than assumed silently, because the leakage magnitude in experiment C depends
-# on it.
+# This is the actual layout of the frozen design, supplied by the author. It
+# supersedes the layout previously inferred here, which was wrong.
+#
+# Difference sample 2001-2026 (26 observations), split into thirds:
+#     B1 = 2001-2009 (9), B2 = 2010-2017 (8), B3 = 2018-2026 (9)
+# Crisis set E = {2008, 2009, 2020, 2021, 2026}; 2001 is deliberately NOT in E.
+#
+# The correction matters for one reason, and it is not cosmetic. Exclusion is
+# by the difference's own year label, so a difference reaching back into an
+# excluded year survives. Under this layout:
+#     delta_2010 leaks from 2009 -- but 2010 falls in B2, which is NOT an
+#                                   endpoint block and bears on nothing
+#     delta_2022 leaks from 2021 -- and 2022 IS in B3ex
+# So contamination is ONE-SIDED: zero leaked differences in B1ex, one in B3ex.
+# Under the previously assumed layout it entered both blocks and cancelled.
 # --------------------------------------------------------------------------
 
-DIFF_YEARS = list(range(2004, 2024))             # delta_t = z_t - z_{t-1}, 20 diffs
-B1_YEARS = list(range(2004, 2013))               # 9 diffs
-B3_YEARS = list(range(2016, 2024))               # 8 diffs
-CRISIS_YEARS = {2008, 2009, 2020, 2021}
+DIFF_YEARS = list(range(2001, 2027))             # delta_t = z_t - z_{t-1}, 26 diffs
+B1_YEARS = list(range(2001, 2010))               # 9 diffs
+B2_YEARS = list(range(2010, 2018))               # 8 diffs (middle third)
+B3_YEARS = list(range(2018, 2027))               # 9 diffs
+CRISIS_YEARS = {2008, 2009, 2020, 2021, 2026}
 
 # Exclusion as the spec performs it: drop a difference when its own year LABEL
 # is a crisis year. A difference reaching back into an excluded year survives.
@@ -172,12 +181,13 @@ def rho_schedule(delta_rho: float,
     """
     rho = np.empty(len(DIFF_YEARS))
     for i, year in enumerate(DIFF_YEARS):
-        if year <= 2012:
+        if year <= B1_YEARS[-1]:
             level = RHO_BASE
-        elif year >= 2016:
+        elif year >= B3_YEARS[0]:
             level = RHO_BASE + delta_rho
         else:
-            frac = (year - 2012) / 4.0
+            span = B3_YEARS[0] - B1_YEARS[-1]
+            frac = (year - B1_YEARS[-1]) / span
             level = RHO_BASE + frac * delta_rho
         if year in CRISIS_YEARS or (year - 1) in CRISIS_YEARS:
             level += crisis_boost
@@ -202,7 +212,7 @@ def simulate(rng: np.random.Generator, n_datasets: int, delta_rho: float,
     If noise_domain is True, the last domain is generated as independent noise
     regardless of rho -- the weather-driven-proxy case in experiment D.
     """
-    rho = rho_schedule(delta_rho)                             # (n_years,)
+    rho = rho_schedule(delta_rho, crisis_boost)               # (n_years,)
     n_years = len(DIFF_YEARS)
     rho_b = rho[None, :, None]
 
@@ -385,10 +395,9 @@ def experiment_power(rng: np.random.Generator, n_datasets: int,
     return rows
 
 
-def experiment_coverage(rng: np.random.Generator, n_datasets: int,
-                        n_reps: int) -> dict:
-    """B: false-positive rate of the one-sided bound when the truth is zero."""
-    data = simulate(rng, n_datasets, 0.0)
+def _coverage_rate(rng: np.random.Generator, n_datasets: int, n_reps: int,
+                   crisis_boost: float) -> tuple[float, float]:
+    data = simulate(rng, n_datasets, 0.0, crisis_boost=crisis_boost)
     n_reject = 0
     lowers = np.empty(n_datasets)
     for i in range(n_datasets):
@@ -397,9 +406,26 @@ def experiment_coverage(rng: np.random.Generator, n_datasets: int,
         lower = bootstrap_lower_bound(rng, b1, b3, n_reps)
         lowers[i] = lower
         n_reject += lower > 0.0
-    rate = n_reject / n_datasets
+    return n_reject / n_datasets, float(lowers.mean())
+
+
+def experiment_coverage(rng: np.random.Generator, n_datasets: int,
+                        n_reps: int) -> dict:
+    """B: false-positive rate of the one-sided bound when the truth is zero.
+
+    Run twice. The design as specified carries crisis elevation, and under the
+    corrected layout that leaks one-sidedly into B3ex. Re-running with the
+    elevation switched off isolates how much of the anti-conservatism is the
+    small-sample bootstrap alone, and how much the exclusion rule adds on top.
+    Without this split the two causes are indistinguishable in the headline
+    number.
+    """
+    rate, mean_lower = _coverage_rate(rng, n_datasets, n_reps, CRISIS_BOOST)
+    rate_no_leak, _ = _coverage_rate(rng, n_datasets, n_reps, 0.0)
     se = float(np.sqrt(rate * (1 - rate) / n_datasets))
     return {
+        "empirical_rate_no_crisis_elevation": rate_no_leak,
+        "leakage_contribution": rate - rate_no_leak,
         "n_datasets": n_datasets,
         "nominal_rate": 0.10,
         "empirical_rate": rate,
@@ -407,7 +433,7 @@ def experiment_coverage(rng: np.random.Generator, n_datasets: int,
         "miscalibration": rate - 0.10,
         "direction": ("anti-conservative" if rate > 0.10 else
                       "conservative" if rate < 0.10 else "exact"),
-        "mean_lower_bound": float(lowers.mean()),
+        "mean_lower_bound": mean_lower,
         "n_blocks_b1": block_starts(len(B1EX_YEARS)),
         "n_blocks_b3": block_starts(len(B3EX_YEARS)),
         "blocks_drawn_b1": int(np.ceil(len(B1EX_YEARS) / BLOCK_LENGTH)),
@@ -416,7 +442,7 @@ def experiment_coverage(rng: np.random.Generator, n_datasets: int,
 
 
 def _spec_minus_clean(rng: np.random.Generator, n_datasets: int, delta: float,
-                      crisis_boost: float) -> np.ndarray:
+                      crisis_boost: float) -> tuple[np.ndarray, np.ndarray]:
     """Paired difference between the two exclusion rules on identical data."""
     data = simulate(rng, n_datasets, delta, crisis_boost=crisis_boost)
     spec = (mean_pairwise_corr(data[:, year_index(B3EX_YEARS)])

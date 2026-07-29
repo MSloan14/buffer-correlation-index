@@ -14,18 +14,43 @@ with seed `20260728`. Full outputs and reproduction instructions are in
 
 ---
 
+## Correction notice (2026-07-28, same day)
+
+An earlier draft of this document reported that the crisis-exclusion leakage was
+**not distinguishable from zero**. That was wrong, on two independent counts,
+and item 5 has been rewritten. Both errors are recorded here rather than
+quietly amended, because a disclosure document that silently revises itself is
+worth nothing.
+
+1. **A code defect.** The no-contamination control accepted a `crisis_boost`
+   argument that was never passed through to the data generator. Both arms of
+   the control therefore produced *contaminated* data, and the reported "net
+   leakage" was the difference between two independent draws of the same
+   quantity — necessarily zero. The control was inert while appearing to work.
+2. **A wrong calendar layout.** The layout had been inferred, not supplied. The
+   author has since provided the actual one, and it reverses the conclusion.
+
+Corrected, the leakage is **large, statistically unambiguous, and biases toward
+CONFIRM** — the direction originally suspected. The earlier null result should
+not be cited.
+
+---
+
 ## Summary
 
 | # | Limitation | Severity |
 |---|---|---|
 | 1 | Endpoint blocks hold 7 and 6 observations | Structural |
-| 2 | Empirical MDE is delta rho ~= 0.59, far outside any plausible effect | **Severe** |
+| 2 | Empirical MDE is delta rho ~= 0.52, far outside any plausible effect | **Severe** |
 | 3 | The four-part conjunction adds almost nothing to C2 alone | Substantive |
-| 4 | Bootstrap bound is anti-conservative: 13.2% actual against 10% nominal | Substantive |
-| 5 | Crisis-exclusion leakage is small and not distinguishable from zero | Minor — **and contrary to prior expectation** |
+| 4 | The test rejects 18.0% of the time when nothing is happening, against a 10% nominal | **Severe** |
+| 5 | Crisis exclusion leaks one-sidedly into B3ex, biasing +0.053 toward CONFIRM | **Severe** |
 | 6 | A noise domain shrinks the recovered effect ~25% | Substantive |
 | 7 | The declined 1990-start extension cost ~30% of the standard error | Self-inflicted |
 | 8 | The best-powered instrument is excluded from the verdict | Self-inflicted |
+
+Items 4 and 5 are one problem seen twice: the leakage in item 5 is the largest
+single contributor to the false-positive rate in item 4.
 
 ---
 
@@ -52,37 +77,54 @@ condition, with 5,000 bootstrap replications each:
 
 | True delta rho | P(C1 and C2) | P(CONFIRM, all four) |
 |---|---|---|
-| 0.00 | 0.136 | 0.104 |
-| 0.10 | 0.204 | 0.176 |
-| 0.20 | 0.321 | 0.301 |
-| 0.30 | 0.454 | 0.435 |
-| 0.40 | 0.588 | 0.579 |
-| 0.50 | **0.720** | **0.714** |
+| 0.00 | 0.184 | 0.155 |
+| 0.10 | 0.281 | 0.257 |
+| 0.15 | 0.353 | 0.333 |
+| 0.20 | 0.415 | 0.394 |
+| 0.30 | 0.550 | 0.541 |
+| 0.40 | 0.665 | 0.659 |
+| 0.50 | **0.782** | **0.779** |
 
 **80% power is not reached anywhere on the pre-specified grid.** At the top of
-that grid, delta rho = 0.50, power is 0.720.
+that grid, delta rho = 0.50, power is 0.782.
 
 Extending the grid beyond the pre-specified range purely to locate the
 threshold, the empirical MDE is:
 
-- **delta rho ~= 0.593** for C1 and C2
-- **delta rho ~= 0.595** for the full conjunction
+- **delta rho ~= 0.515** for C1 and C2
+- **delta rho ~= 0.517** for the full conjunction
+
+**Do not read this as an improvement over the earlier draft's 0.59.** The entire
+curve, including the row at delta rho = 0, sits higher than before because the
+one-sided leakage in item 5 adds a positive bias to every estimate. A test that
+rejects more often when nothing is happening will also cross any power threshold
+sooner. Power bought with bias is not detection, and the correct summary is that
+the design got *worse*, not better: the MDE fell only because the false-positive
+rate nearly doubled.
 
 Stated in the units that matter: with a baseline mean pairwise correlation of
 0.20, detecting an effect at 80% power requires the mean pairwise correlation
-across 28 domain pairs to rise to roughly **0.79**. That is not a plausible
-effect size. It is close to the ceiling of the statistic.
+across 28 domain pairs to rise to roughly **0.72**. That is not a plausible
+effect size.
 
 At effect sizes anyone would actually predict — say delta rho between 0.10 and
-0.20 — **the design has a 20% to 32% chance of confirming a real effect.** A
-non-confirmation from this design is therefore close to uninformative: it is the
-expected outcome whether or not the hypothesis is true.
+0.20 — **the design confirms 28% to 42% of the time.** But that figure cannot be
+read as detection either, because it must be compared against the **18.4%** rate
+at which the design confirms when there is *no effect at all*. At delta rho =
+0.15 the design confirms 35.3% of the time against 18.4% under the null: a
+likelihood ratio of about **1.9 for a confirmation**, and about **0.79 for a
+non-confirmation**.
+
+That second number is the one that matters. A non-confirmation from this design
+shifts the odds against the hypothesis by a factor of roughly 0.8 — which is to
+say, almost not at all. **The design is close to incapable of producing evidence
+in either direction**, and a pre-commitment to it buys very little.
 
 ## 3. The conjunction costs almost nothing, which is itself the finding
 
-The gap between P(C1 and C2) and P(CONFIRM) is **0.006 to 0.032**, and it
-*shrinks* as the true effect grows: 0.032 at delta rho = 0, 0.020 at 0.20, and
-0.006 at 0.50.
+The gap between P(C1 and C2) and P(CONFIRM) is **0.003 to 0.039**, and it
+*shrinks* as the true effect grows: 0.029 at delta rho = 0, 0.021 at 0.20, and
+0.003 at 0.50.
 
 The intended reading of a four-part conjunction is that it is demanding. It is
 not. **C3 and C4 are very nearly implied by C1 and C2**: once the point estimate
@@ -96,25 +138,37 @@ Two honest consequences:
 - The design's apparent stringency is largely decorative. Reporting "all four
   pre-registered criteria were met" conveys materially less independent
   corroboration than the phrase implies.
-- One incidental effect is real: at delta rho = 0 the extra criteria trim the
-  false-positive rate from 0.136 to 0.104, which happens to offset the
-  bootstrap's anti-conservatism (item 4) and land near the nominal 10%. **This
-  is a coincidence, not a design feature**, and it should not be cited as
-  evidence the procedure is calibrated.
+- At delta rho = 0 the extra criteria trim the false-positive rate only from
+  0.184 to 0.155. They remove less than a fifth of the excess and leave the test
+  badly anti-conservative. **The conjunction does not rescue the calibration**,
+  and should not be cited as though it does.
 
 ## 4. Bootstrap calibration
 
-At a true delta rho of zero, across 5,000 simulated datasets, the one-sided 90%
-bound excludes zero **13.2% of the time** against a nominal **10%**.
+At a true delta rho of zero, across 5,000 simulated datasets, the design as
+specified excludes zero **18.0% of the time** against a nominal **10%** —
+**nearly double the advertised rate**, with a Monte Carlo standard error of
+0.005. Direction: **anti-conservative**.
 
-- Absolute miscalibration: **+3.2 percentage points**
-- Relative inflation of the false-positive rate: **~32%**
-- Monte Carlo standard error: ~0.005, so the discrepancy is real, not noise
-- Direction: **anti-conservative** — the procedure rejects the null more often
-  than advertised
+Two distinct causes contribute, and they can be separated by re-running with the
+crisis elevation switched off:
 
-This is the expected consequence of item 1. A moving-block bootstrap with 3 to 4
-resampled blocks per side cannot represent the sampling distribution well.
+| Source | False-positive rate | Excess over nominal |
+|---|---|---|
+| Nominal | 0.100 | — |
+| Small-sample bootstrap alone (no crisis elevation) | 0.1288 | +0.029 |
+| Crisis-exclusion leakage, added on top | — | **+0.051** |
+| **Design as specified** | **0.1796** | **+0.080** |
+
+**The leakage is the larger cause.** It contributes more spurious rejections
+than the bootstrap's small-sample failure does. This matters for triage: fixing
+the exclusion rule is a bigger win than anything that could be done about the
+bootstrap, and unlike block size it is a free choice rather than a constraint
+imposed by the data.
+
+The bootstrap component is the expected consequence of item 1 — with 3 to 4
+resampled blocks per side, the moving-block bootstrap cannot represent the
+sampling distribution well.
 
 **This figure is optimistic.** The simulated differences are serially
 independent, which is the most favourable case for a block bootstrap. The
@@ -122,48 +176,48 @@ moving-block scheme exists to accommodate serial dependence; if the real series
 carry any, calibration will be worse than 13.2%, not better. The true
 false-positive rate should be treated as **at least** 13%.
 
-## 5. Crisis-exclusion leakage — contrary to the prior expectation
+## 5. Crisis-exclusion leakage is one-sided and biases toward CONFIRM
 
 The spec excludes crisis years by the **year label of the difference**, so a
-difference reaching back into an excluded year survives: `delta_2010 = z2010 -
-z2009` and `delta_2022 = z2022 - z2021` both remain in the analysed blocks
-despite spanning an excluded year.
+difference reaching back into an excluded year survives. Under the authoritative
+calendar layout, the consequence is asymmetric:
 
-The expectation recorded before this simulation was that the leakage biases
-**toward CONFIRM**, i.e. that it is thesis-helping. **The simulation does not
-support that**, and the correct finding is reported here in preference to the
-expectation.
+- `delta_2010 = z2010 - z2009` leaks from the 2008-09 crisis — but 2010 falls in
+  **B2**, the middle third, which bears on nothing in the headline contrast.
+- `delta_2022 = z2022 - z2021` leaks from the 2020-21 crisis — and 2022 **is in
+  B3ex**.
+
+So **B1ex contains zero contaminated differences and B3ex contains one.** Nothing
+cancels. The contamination lands entirely on the late block, inflating
+`rhobar(B3ex)`, and therefore inflating `delta_rho`.
 
 | True delta rho | Raw spec-minus-clean | Sample-size artifact | **Net leakage** |
 |---|---|---|---|
-| 0.00 | +0.0110 | +0.0150 | **-0.0040** (se 0.0050) |
-| 0.15 | +0.0175 | +0.0129 | **+0.0046** (se 0.0050) |
+| 0.00 | +0.0595 | +0.0066 | **+0.0529** (se 0.0033) |
+| 0.15 | +0.0604 | +0.0047 | **+0.0557** (se 0.0036) |
 
-**Neither net figure is distinguishable from zero**; both are within one
-standard error.
+The net bias is roughly **sixteen standard errors from zero**. Its direction is
+**toward CONFIRM**: the exclusion rule, as written, helps the thesis it is meant
+to be testing.
 
-Why the naive comparison misleads: label-based exclusion leaves blocks of 7 and
-6, while clean exclusion leaves 6 and 5. Pearson correlations attenuate toward
-zero more severely at smaller *n*, and the two schemes have different *n*, so a
-raw comparison confounds contamination with an arithmetic artifact. Re-running
-with the crisis elevation switched off isolates that artifact — identical block
-sizes, no contamination — and it accounts for essentially the whole raw
-difference. **A reviewer told only the raw number would conclude the design has a
-thesis-helping bias of +0.011 to +0.018 that it does not have.**
+The sample-size artifact is now small because B1ex and B1clean are the same 7
+observations under this layout; only the B3 side differs (6 against 5). The
+control is still necessary to establish that, but it no longer explains much.
 
-The mechanism behind the near-cancellation: under the calendar layout assumed
-here, contamination enters **both** blocks — one leaked difference in B1ex and
-one in B3ex — and largely cancels in the contrast. The small residual comes from
-B3ex being the smaller block, so its single contaminated observation carries more
-weight.
+**On magnitude:** +0.053 sits against an MDE of ~0.515, so the bias is about a
+tenth of a detectable effect. That understates its importance. The bias applies
+at *every* effect size including zero, which is why it contributes +0.051 of the
++0.080 excess false-positive rate in item 4. A design that manufactures a tenth
+of its own detection threshold out of an exclusion rule is not neutral about the
+answer.
 
-**This result is conditional on that layout and should not be generalised.** The
-calendar layout is an assumption (see the results README); it was chosen to
-reproduce the two stated block sizes and both stated leakage examples. **If the
-real layout leaves leaked differences in only one block, they would not cancel,
-and the bias could be substantial and thesis-helping as originally expected.**
-Confirming the actual layout is a genuine open item, and the original concern is
-not disposed of — only shown not to apply under the layout modelled.
+**This is the one finding here with an obvious remedy.** Excluding a difference
+when *either* endpoint year falls in the crisis set, rather than only its own
+label, removes the contamination. It costs one observation in B3ex (6 down to
+5), which is not free given item 1 — but a smaller unbiased block is worth more
+than a larger block with a thesis-helping thumb on the scale. **That change is
+not proposed here and has not been made**; the specification is frozen and this
+document is disclosure, not revision.
 
 ## 6. Domain-8 dilution, and a mis-tagged domain
 
@@ -172,14 +226,14 @@ weather-driven proxy):
 
 | True delta rho | 7 informative | 8 with noise | Shrinkage | Power |
 |---|---|---|---|---|
-| 0.10 | 0.0972 | 0.0693 | 28.7% | 0.227 -> 0.197 |
-| 0.20 | 0.1894 | 0.1404 | 25.9% | 0.322 -> 0.290 |
-| 0.30 | 0.2946 | 0.2222 | 24.6% | 0.432 -> 0.395 |
+| 0.10 | 0.1486 | 0.1085 | 27.0% | 0.265 -> 0.227 |
+| 0.20 | 0.2403 | 0.1877 | 21.9% | 0.402 -> 0.393 |
+| 0.30 | 0.3318 | 0.2535 | 23.6% | 0.555 -> 0.498 |
 
-The measured shrinkage matches the arithmetic exactly. A noise domain
-contributes 7 null pairs to the 28, so the unweighted mean is multiplied by
-21/28 = 0.75. **Any true effect is attenuated by 25%, and the power already
-reported in item 2 is reduced by a further 3 to 4 points.**
+The measured shrinkage matches the arithmetic. A noise domain contributes 7 null
+pairs to the 28, so the unweighted mean is multiplied by 21/28 = 0.75.
+**Any true effect is attenuated by roughly 25%, and the power already reported
+in item 2 is reduced by a further 1 to 6 points.**
 
 **On the "neutral-precision" tag.** The food domain was tagged
 *neutral-precision* in the design. That tag is incorrect, and demonstrably so
@@ -198,11 +252,12 @@ standard error**. (That figure is carried from the design record; it was not
 re-derived by this simulation.)
 
 Given item 2, the cost is not marginal. The MDE scales roughly with the standard
-error, so a 30% reduction would move the empirical MDE from **~0.59 to roughly
-~0.41** — an approximation, not a simulated result. That remains a large effect
-and would not rescue the design. But it would roughly halve the required effect
-relative to the baseline correlation, and it would materially improve the
-bootstrap calibration in item 4 by supplying more blocks.
+error, so a 30% reduction would move the empirical MDE from **~0.52 to roughly
+~0.36** — an approximation, not a simulated result. That remains a large effect
+and would not on its own rescue the design. But it would materially improve the
+bootstrap calibration in item 4 by supplying more blocks, and the candidate
+comparison in [`results/design-comparison/`](results/design-comparison/)
+quantifies what a longer sample actually buys.
 
 Declining it made an already underpowered design meaningfully weaker, for
 reasons that should be stated explicitly in the pre-registration.
@@ -241,9 +296,16 @@ response to anything seen in the data.
 
 The findings depend on assumptions the frozen spec does not fix, chief among
 them a baseline mean pairwise correlation of 0.20, a crisis elevation of +0.35,
-an equicorrelation factor structure, **no serial dependence**, and the calendar
-layout discussed in item 5. All are documented in
+an equicorrelation factor structure, and **no serial dependence**. All are
+documented in
 [`results/power-simulation/README.md`](results/power-simulation/README.md).
+
+The calendar layout is **no longer** among these assumptions: it was supplied by
+the author on 2026-07-28 and is authoritative. The leakage magnitude in item 5
+does still scale with the assumed crisis elevation of +0.35 — a smaller
+elevation would produce a proportionally smaller bias — but its *direction* and
+one-sidedness follow from the layout and the exclusion rule alone, not from any
+simulation assumption.
 
 Two of these push the reported numbers in a known direction: the absence of
 serial dependence flatters the bootstrap, and the main power curve assumes all
