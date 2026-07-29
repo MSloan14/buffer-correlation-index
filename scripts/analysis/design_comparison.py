@@ -494,6 +494,22 @@ def main() -> int:
         per_cand[key] = curve
         rows.extend(curve)
 
+    # ---------------- true size, per candidate ----------------
+    #
+    # fpr_at_zero conflates two different things: the test's actual SIZE, and
+    # how much crisis contamination the design admits. Re-running each
+    # candidate at delta=0 with the crisis elevation switched off separates
+    # them. Without this split, a design is penalised on the "calibration" axis
+    # for a contamination problem that has nothing to do with its inference.
+    print("True size (crisis elevation OFF) per candidate")
+    true_size: dict[str, float] = {}
+    for ci, (key, cand) in enumerate(cands.items()):
+        rng = np.random.default_rng(ss[9].spawn(len(cands))[ci])
+        reps = n_boot if cand["kind"] == "endpoint" else n_boot_tr
+        r = run_condition(rng, cand, 0.0, n_data, reps, crisis_boost=0.0)
+        true_size[key] = r["power"]
+        print("  %s true size=%.3f (se %.3f)" % (key, r["power"], r["se"]))
+
     # ---------------- summary per candidate ----------------
     summary_rows = []
     for key, cand in cands.items():
@@ -513,6 +529,8 @@ def main() -> int:
             "power_020": by_d.get(0.20),
             "mde80": mde if mde is not None else "",
             "fpr_at_zero": p0,
+            "true_size_no_crisis": true_size[key],
+            "leak_contribution": p0 - true_size[key],
             "nominal_alpha": ALPHA,
             "lr_confirm_at_015": lr_conf,
             "lr_disconfirm_at_015": lr_disc,
@@ -565,18 +583,49 @@ def main() -> int:
     print("  C-F const drift : mean count=%.2f/8  trend confirm=%.3f" %
           (d1_cf["mean_extra"], d1_cf["power"]))
 
-    print("D2. synchronized time-varying drift in the late block")
+    # D2 runs BOTH families with the crisis elevation off, and reports the
+    # REALIZED contrast rather than the nominal parameter. The AR(1) common
+    # drift is persistent, and a persistent common component is partly absorbed
+    # by within-block centring, so its realized effect is well below the value
+    # solved for per-observation. Comparing power at equal NOMINAL values would
+    # therefore compare two different effect sizes and overstate the deficit.
+    print("D2. synchronized time-varying drift in the late block (crisis OFF)")
     rng = np.random.default_rng(ss[8])
     d2_rows = []
     for d in ([0.15] if args.quick else [0.10, 0.15, 0.20, 0.30]):
-        r = run_condition(rng, cands["C-A"], 0.0, n_data, n_boot, sync=d)
-        eq = next((x["power"] for x in per_cand["C-A"]
-                   if abs(x["true_delta_rho"] - d) < 1e-9), None)
-        d2_rows.append({"induced_delta_rho": d, "power_sync_drift": r["power"],
-                        "power_equicorrelation": eq,
-                        "mean_stat": r["mean_stat"]})
-        print("  induced delta=%.2f  power(sync drift)=%.3f  power(equicorr)=%s" %
-              (d, r["power"], "n/a" if eq is None else "%.3f" % eq))
+        rs = run_condition(rng, cands["C-A"], 0.0, n_data, n_boot, sync=d,
+                           crisis_boost=0.0)
+        re_ = run_condition(rng, cands["C-A"], d, n_data, n_boot,
+                            crisis_boost=0.0)
+        d2_rows.append({
+            "nominal_parameter": d,
+            "realized_delta_sync_drift": rs["mean_stat"],
+            "realized_delta_equicorrelation": re_["mean_stat"],
+            "power_sync_drift": rs["power"],
+            "power_equicorrelation": re_["power"],
+        })
+        print("  nominal=%.2f | sync: realized=%.3f power=%.3f | equicorr: "
+              "realized=%.3f power=%.3f" %
+              (d, rs["mean_stat"], rs["power"], re_["mean_stat"], re_["power"]))
+
+    # D1b. A shared drift that is NOT constant. D1 shows a constant common
+    # drift is invisible, because differencing annihilates it. A drift with
+    # curvature does NOT vanish under differencing: its first difference varies
+    # over time and is shared across every domain, which is precisely a common
+    # factor. Worse, the late block spans a wider index range than the early
+    # one, so the shared component carries more variance there and the contrast
+    # comes out positive with no change in genuine co-movement whatsoever.
+    print("D1b. shared NON-constant drift (identical path, independent noise)")
+    rng = np.random.default_rng(ss[10])
+    t_norm = np.arange(n_obs_a) / (n_obs_a - 1)
+    d1b_rows = []
+    for c in ([0.0, 3.0] if args.quick else [0.0, 1.0, 2.0, 3.0, 5.0]):
+        r = run_condition(rng, cands["C-A"], 0.0, n_data, n_boot,
+                          drift=-c * t_norm ** 2, crisis_boost=0.0)
+        d1b_rows.append({"curvature_c": c, "realized_delta_rho": r["mean_stat"],
+                         "confirm_rate": r["power"], "se": r["se"]})
+        print("  curvature=%.1f  realized delta_rho=%+.3f  confirm rate=%.3f" %
+              (c, r["mean_stat"], r["power"]))
 
     elapsed = time.time() - t0
 
@@ -584,6 +633,7 @@ def main() -> int:
     write_csv(outdir / "candidate_summary.csv", summary_rows)
     write_csv(outdir / "cf_drift_axis.csv", cf_rows)
     write_csv(outdir / "d2_sync_drift.csv", d2_rows)
+    write_csv(outdir / "d1b_shared_curved_drift.csv", d1b_rows)
 
     any_meets = any(r["meets_80_at_015"] for r in summary_rows)
     summary = {
@@ -623,6 +673,8 @@ def main() -> int:
             "cf_trend_confirm_rate_with_drift": d1_cf["power"],
         },
         "diagnostic_d2_synchronized_drift": d2_rows,
+        "diagnostic_d1b_shared_curved_drift": d1b_rows,
+        "true_size_by_candidate": true_size,
     }
     (outdir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n",
                                          encoding="utf-8", newline="\n")

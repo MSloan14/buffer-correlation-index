@@ -30,6 +30,8 @@ Outputs land in results/power-simulation/.
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
 import platform
 import sys
@@ -573,10 +575,22 @@ def interpolate_mde(rows: list[dict], key: str,
 
 
 def write_csv(path: Path, rows: list[dict]) -> None:
+    """Write rows as RFC 4180 CSV.
+
+    Uses csv.writer rather than joining on commas by hand. An earlier version
+    joined manually, and any field containing a comma -- the candidate labels
+    in the design comparison all do -- silently produced a row with more fields
+    than the header. Under a standard reader every column after the label
+    shifted by one, so the false-positive rate parsed as the MDE. The rendered
+    tables were right and only the machine-readable export was corrupt, which
+    is the failure mode most likely to survive review.
+    """
     if not rows:
         return
     keys = list(rows[0].keys())
-    lines = [",".join(keys)]
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(keys)
     for row in rows:
         vals = []
         for k in keys:
@@ -585,9 +599,9 @@ def write_csv(path: Path, rows: list[dict]) -> None:
                 v = " ".join(str(x) for x in v)
             if isinstance(v, float):
                 v = "%.6f" % v
-            vals.append(str(v))
-        lines.append(",".join(vals))
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+            vals.append(v)
+        writer.writerow(vals)
+    path.write_text(buf.getvalue(), encoding="utf-8", newline="\n")
 
 
 def make_plots(outdir: Path, power_rows: list[dict], leak_rows: list[dict],

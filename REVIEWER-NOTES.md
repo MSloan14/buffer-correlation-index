@@ -48,9 +48,12 @@ not be cited.
 | 6 | A noise domain shrinks the recovered effect ~25% | Substantive |
 | 7 | The declined 1990-start extension cost ~30% of the standard error | Self-inflicted |
 | 8 | The best-powered instrument is excluded from the verdict | Self-inflicted |
+| 9 | A shared drift with curvature is read as rising co-movement | **Severe** |
 
 Items 4 and 5 are one problem seen twice: the leakage in item 5 is the largest
-single contributor to the false-positive rate in item 4.
+single contributor to the false-positive rate in item 4. Item 9 was found by an
+independent verification pass and is the most consequential entry here: it is a
+confounder, not a power problem, so no redesign of the blocks addresses it.
 
 ---
 
@@ -77,22 +80,22 @@ condition, with 5,000 bootstrap replications each:
 
 | True delta rho | P(C1 and C2) | P(CONFIRM, all four) |
 |---|---|---|
-| 0.00 | 0.184 | 0.155 |
-| 0.10 | 0.281 | 0.257 |
-| 0.15 | 0.353 | 0.333 |
-| 0.20 | 0.415 | 0.394 |
-| 0.30 | 0.550 | 0.541 |
-| 0.40 | 0.665 | 0.659 |
-| 0.50 | **0.782** | **0.779** |
+| 0.00 | 0.182 | 0.124 |
+| 0.10 | 0.292 | 0.235 |
+| 0.15 | 0.349 | 0.287 |
+| 0.20 | 0.408 | 0.361 |
+| 0.30 | 0.536 | 0.508 |
+| 0.40 | 0.671 | 0.653 |
+| 0.50 | **0.772** | **0.760** |
 
 **80% power is not reached anywhere on the pre-specified grid.** At the top of
-that grid, delta rho = 0.50, power is 0.782.
+that grid, delta rho = 0.50, power is 0.772.
 
 Extending the grid beyond the pre-specified range purely to locate the
 threshold, the empirical MDE is:
 
-- **delta rho ~= 0.515** for C1 and C2
-- **delta rho ~= 0.517** for the full conjunction
+- **delta rho ~= 0.520** for C1 and C2
+- **delta rho ~= 0.527** for the full conjunction
 
 **Do not read this as an improvement over the earlier draft's 0.59.** The entire
 curve, including the row at delta rho = 0, sits higher than before because the
@@ -108,12 +111,16 @@ across 28 domain pairs to rise to roughly **0.72**. That is not a plausible
 effect size.
 
 At effect sizes anyone would actually predict — say delta rho between 0.10 and
-0.20 — **the design confirms 28% to 42% of the time.** But that figure cannot be
-read as detection either, because it must be compared against the **18.4%** rate
-at which the design confirms when there is *no effect at all*. At delta rho =
-0.15 the design confirms 35.3% of the time against 18.4% under the null: a
-likelihood ratio of about **1.9 for a confirmation**, and about **0.79 for a
-non-confirmation**.
+0.20 — **the design confirms 24% to 36% of the time** under the full four-part
+conjunction. That figure cannot be read as detection, because it must be
+compared against the **12.4%** rate at which the design confirms when there is
+*no effect at all*. At delta rho = 0.15 the full conjunction confirms 28.7% of
+the time against 12.4% under the null:
+
+| | LR for a confirmation | **LR for a non-confirmation** |
+|---|---|---|
+| C1 and C2 only | 1.92 | **0.795** |
+| Full conjunction (C1-C4) | 2.31 | **0.814** |
 
 That second number is the one that matters. A non-confirmation from this design
 shifts the odds against the hypothesis by a factor of roughly 0.8 — which is to
@@ -122,9 +129,17 @@ in either direction**, and a pre-commitment to it buys very little.
 
 ## 3. The conjunction costs almost nothing, which is itself the finding
 
-The gap between P(C1 and C2) and P(CONFIRM) is **0.003 to 0.039**, and it
-*shrinks* as the true effect grows: 0.029 at delta rho = 0, 0.021 at 0.20, and
-0.003 at 0.50.
+The gap between P(C1 and C2) and P(CONFIRM) is **0.012 to 0.066**, and it
+*shrinks* as the true effect grows: 0.057 at delta rho = 0, 0.047 at 0.20, and
+0.012 at 0.50.
+
+> **Revised 2026-07-28.** An earlier draft put this gap at 0.003-0.039 and
+> concluded the conjunction was almost entirely decorative. That understated it,
+> because the C3 reweighting had been implemented over the 28 pairs directly
+> rather than over domains with pair weight as the product, as spec v0.2 section
+> 6 requires. The specified scheme makes pairs sharing a domain co-vary, which
+> is more demanding; correcting it roughly doubled the gap. The conclusion is
+> softened but not reversed — see below.
 
 The intended reading of a four-part conjunction is that it is demanding. It is
 not. **C3 and C4 are very nearly implied by C1 and C2**: once the point estimate
@@ -138,10 +153,16 @@ Two honest consequences:
 - The design's apparent stringency is largely decorative. Reporting "all four
   pre-registered criteria were met" conveys materially less independent
   corroboration than the phrase implies.
-- At delta rho = 0 the extra criteria trim the false-positive rate only from
-  0.184 to 0.155. They remove less than a fifth of the excess and leave the test
-  badly anti-conservative. **The conjunction does not rescue the calibration**,
-  and should not be cited as though it does.
+- At delta rho = 0 the extra criteria trim the false-positive rate from 0.182 to
+  0.124 — about 40% of the excess over nominal. That is more than decorative,
+  but it still leaves the test anti-conservative at 12.4% against a 10% nominal.
+  **The conjunction does not rescue the calibration**, and should not be cited
+  as though it does.
+- An independent verification pass established *why* C3 cannot do much more:
+  the drop-one reruns and the Dirichlet reweightings are deterministic
+  functions of the **same 28 pairwise differences** that produce the headline
+  estimate. They resample nothing. A criterion computed from the same numbers
+  as the statistic it is checking can only ever be weakly independent of it.
 
 ## 4. Bootstrap calibration
 
@@ -211,13 +232,30 @@ at *every* effect size including zero, which is why it contributes +0.051 of the
 of its own detection threshold out of an exclusion rule is not neutral about the
 answer.
 
-**This is the one finding here with an obvious remedy.** Excluding a difference
-when *either* endpoint year falls in the crisis set, rather than only its own
-label, removes the contamination. It costs one observation in B3ex (6 down to
-5), which is not free given item 1 — but a smaller unbiased block is worth more
-than a larger block with a thesis-helping thumb on the scale. **That change is
-not proposed here and has not been made**; the specification is frozen and this
-document is disclosure, not revision.
+**There is an obvious remedy, and it is not as clearly a win as it first
+appears.** Excluding a difference when *either* endpoint year falls in the
+crisis set, rather than only its own label, removes the contamination. It costs
+one observation in B3ex (6 down to 5). An independent verification pass
+simulated exactly that change:
+
+| | As specified | Endpoint-based exclusion |
+|---|---|---|
+| False-positive rate at zero | 0.186 | **0.108** |
+| Power at delta rho = 0.15 | 0.343 | **0.206** |
+| LR for a confirmation | 2.08 | 1.91 |
+| **LR for a non-confirmation** | 0.79 | **0.89** |
+
+So the fix does what it should — it very nearly restores nominal size — but it
+costs a third of the power, and a **non-confirmation becomes *less*
+informative**, not more. An earlier draft of this document asserted that "a
+smaller unbiased block is worth more than a larger block with a thesis-helping
+thumb on the scale." On the evidence that is too glib: the repair is right for
+correctness and interpretability, and close to evidentially neutral. It should
+be adopted because a test that manufactures its own effect is indefensible, not
+because it buys evidential power. It does not.
+
+**That change is not proposed here and has not been made**; the specification is
+frozen and this document is disclosure, not revision.
 
 ## 6. Domain-8 dilution, and a mis-tagged domain
 
@@ -277,6 +315,65 @@ the more informative test is not the deciding one. As it stands the arrangement
 also has an unfortunate property: a confirmation can be reported from the
 low-powered instrument while the high-powered one is exempt from contradicting
 it.
+
+## 9. A shared drift with curvature is read as rising co-movement
+
+Item 6 of the design comparison reports that a **constant** common drift is
+invisible to this statistic — differencing annihilates it. That is true, and an
+earlier draft of these notes presented it as reassurance. **It is not
+reassurance, and the reassuring gloss was wrong.**
+
+Differencing annihilates a drift only if the drift is *linear*. A shared drain
+with **curvature** survives differencing: its first difference varies over time,
+and it is identical across every domain, which is precisely the definition of a
+common factor. An independent verification pass simulated a shared,
+deterministic, accelerating depletion path — identical in every domain, noise
+fully independent, **no change whatsoever in genuine co-movement**:
+
+| Curvature of the shared path | Realized delta rho | Rejection rate |
+|---|---|---|
+| mild | +0.050 | 0.145 |
+| moderate | +0.170 | 0.210 |
+| strong | **+0.438** | **0.426** |
+
+The mechanism compounds the problem. The late block spans a wider index range
+than the early one, so a shared component whose variance grows over time
+contributes *more* variance to B3ex than to B1ex — and the contrast comes out
+positive by construction, before any real co-movement exists.
+
+**Why this is the most serious item in this document.** Everything else here is
+a power or calibration problem, curable in principle by more data or a better
+exclusion rule. This is a **confounder**: the statistic cannot distinguish
+"deviations around the trend became more correlated" from "the shared trend
+became more curved." A system in which every buffer drains at an *accelerating*
+rate — arguably the most natural reading of the thesis as stated — produces a
+positive contrast with no rise in co-movement at all. More observations would
+estimate the confounded quantity more precisely; they would not separate it.
+
+This is now simulated directly as diagnostic D1b in
+[`results/design-comparison/`](results/design-comparison/).
+
+---
+
+## Provenance of these findings
+
+Items 1-8 were produced by the primary simulation. **Items 3, 5, 8 and 9 were
+materially revised or created by an independent verification pass** commissioned
+on 2026-07-28, which was given the frozen specification and asked to
+re-implement the statistic and the power loop from scratch rather than review
+the existing code. It reproduced the calendar, the block memberships, the
+statistic, the bootstrap, and the candidate ranking independently, and it found:
+
+- a defect in the machine-readable export of the candidate comparison (fields
+  containing commas were unquoted, so two rows mis-parsed and the false-positive
+  column read as the MDE column) — since fixed
+- that a claimed 25-30% power deficit under synchronized drift was an artifact
+  of comparing at unequal realized effect sizes, and is nearer 11%
+- that the earlier "calibration is the sharpest separator" framing conflated
+  test size with crisis contamination
+- item 9 above, which the primary simulation had missed entirely
+
+Its dissents are recorded here in the form it argued them, not softened.
 
 ---
 

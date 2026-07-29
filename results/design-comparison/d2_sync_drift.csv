@@ -1,5 +1,2 @@
-induced_delta_rho,power_sync_drift,power_equicorrelation,mean_stat
-0.100000,0.227500,0.295000,0.100936
-0.150000,0.248500,0.326000,0.135772
-0.200000,0.292500,0.395500,0.176959
-0.300000,0.376500,0.537000,0.237541
+nominal_parameter,realized_delta_sync_drift,realized_delta_equicorrelation,power_sync_drift,power_equicorrelation
+0.150000,0.120559,0.112887,0.225000,0.225000
