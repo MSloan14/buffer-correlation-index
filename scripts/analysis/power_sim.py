@@ -55,7 +55,9 @@ N_BOOTSTRAP = 5000
 BOUND_PERCENTILE = 10.0                          # one-sided 90 percent lower bound
 N_DIRICHLET = 1000
 DIRICHLET_SIGN_THRESHOLD = 0.90
-ROLLING_WINDOW = 7                               # for the C4 Mann-Kendall series
+# Spec v0.2 section 5: trailing 10-year rolling windows are the specified series
+# (8-year is robustness run S6, not the primary). This feeds C4's Mann-Kendall leg.
+ROLLING_WINDOW = 10
 
 # --------------------------------------------------------------------------
 # Year layout -- CORRECTED 2026-07-28
@@ -316,14 +318,20 @@ def evaluate_criteria(rng: np.random.Generator, data: np.ndarray,
 
     # C3b: sign survives reweighting the pairs.
     #
-    # For weights w summing to 1, the weighted contrast is sum_p w_p * g_p with
-    # g = r3 - r1. A symmetric Dirichlet(1) draw is a normalized vector of unit
-    # exponentials, and the normalizer is positive, so the SIGN of the weighted
-    # contrast is the sign of the unnormalized dot product. That lets the 1000
-    # reweightings collapse to a single matrix-vector product.
+    # Spec v0.2 section 6, C3, exactly: "symmetric Dirichlet, concentration 1,
+    # weights on DOMAINS, pair weight = product of its domains' weights
+    # renormalized". Weighting the 28 pairs directly would be a different
+    # distribution -- it treats pairs as exchangeable, whereas the specified
+    # scheme makes pairs sharing a domain co-vary, which is the whole point of
+    # perturbing domain importance.
+    #
+    # Renormalizing divides every pair weight by a positive scalar, so it
+    # cannot change the sign of the weighted contrast; the division is skipped
+    # and only the sign of the unnormalized product is taken.
     g = r3 - r1
-    e = rng.standard_exponential((N_DIRICHLET, len(g)))
-    weighted = e @ g
+    w = rng.dirichlet(np.ones(n_dom), size=N_DIRICHLET)   # (N, n_domains)
+    pair_w = w[:, iu[0]] * w[:, iu[1]]                    # (N, n_pairs)
+    weighted = pair_w @ g
     frac_same = float(np.mean(np.sign(weighted) == np.sign(delta_hat)))
     c3b = frac_same >= DIRICHLET_SIGN_THRESHOLD
     c3 = bool(drop_ok and c3b)
