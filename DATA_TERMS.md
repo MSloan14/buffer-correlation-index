@@ -54,8 +54,9 @@ precise enough that a reader holding a licence can locate and check it.
 
 | Source | Domain use | What may be committed |
 |---|---|---|
-| S&P / rating-agency corporate aggregates | Corporate credit | Transcribed numeric values + citation |
-| AHA Hospital Statistics | Health / hospital capacity | Transcribed numeric values + citation |
+| S&P / rating-agency corporate aggregates | Corporate credit (domain 4) | Transcribed numeric values + citation |
+| AHA Hospital Statistics | Health capacity (domain 6) | Transcribed numeric values + citation |
+| **IMF GFSR** | Corporate credit (domain 4) | Transcribed numeric values + citation. **Never** the GFSR chapter PDF, its tables, figures, or any bulk extract. |
 
 A citation is sufficient if it names the publication, edition or year, table
 number or identifier, and the row and column labels the value was taken from.
@@ -66,15 +67,34 @@ check internal consistency and re-run the analysis on the committed values, but
 the transcription itself rests on the author's fidelity. This is a real
 limitation of the audit trail and is disclosed rather than concealed.
 
+## FRED — not tierable as a source
+
+**FRED cannot be assigned a tier, and never will be.** It is an aggregator: the
+redistribution terms of a FRED series are the terms of whoever *originally*
+published it. Some FRED series are federal works and fall under Tier 1; others
+are redistributed under licence from commercial providers and fall under Tier 3.
+"Retrieved from FRED" therefore says nothing about what may be committed.
+
+Two rules follow, both binding on Phase 3:
+
+1. **Tier is determined by the underlying provider, per series, before
+   retrieval.** Record the originating source in
+   [`data/SOURCES.md`](data/SOURCES.md), not merely "FRED".
+2. **Prefer the original source wherever one is available.** Spec v0.2 names
+   primary feeds directly — EIA, BIS, OMB/CBO, BEA, BLS, AHA/OECD, USDA — and
+   those should be fetched from the issuing agency rather than through FRED.
+   FRED's convenience is not worth the provenance ambiguity in a repository
+   whose entire value is provenance. Where the spec explicitly names a FRED
+   mirror as acceptable (§3, the quarterly debt/GDP series for the companion),
+   using it is fine; the originating agency still goes in the record.
+
 ## UNDETERMINED — resolve before Phase 3
 
-| Source | Why unresolved |
-|---|---|
-| FRED (Federal Reserve Economic Data) | FRED is an aggregator. Its terms depend on the *underlying* provider of each series: some are federal works (Tier 1), others are redistributed under licence from commercial providers (Tier 3). Status must be determined per series, not for FRED as a whole. |
-| IMF | Not yet classified. IMF data terms differ across datasets and some carry redistribution restrictions. |
+None outstanding. IMF GFSR is classified Tier 3 above; FRED is handled by the
+per-series rule above.
 
-No series from an UNDETERMINED source may be committed until it has been
-classified into a tier above.
+No series from an unclassified source may be committed until it has been
+assigned a tier.
 
 ---
 
