@@ -52,12 +52,27 @@ contributes more variance to the late block. The contrast comes out positive
 
 ### Why no redesign rescues it
 
-The confound is a property of **the differencing family**, not of the block
-structure, the sample, or the inference procedure. Every candidate examined —
-C-A through C-E, spanning annual and quarterly frequency, endpoint contrasts and
-all-window trend statistics, four domains and eight — computes correlations of
-differenced series and inherits the same blind spot. More observations estimate
-the confounded quantity more precisely. They do not separate it.
+The mechanism is a property of **the differencing family**. Every candidate
+examined — C-A through C-E, spanning annual and quarterly frequency, endpoint
+contrasts and all-window trend statistics, four domains and eight — computes
+correlations of differenced series, and a shared curved path inflates the
+measured correlation in all of them.
+
+**The precise scope of that claim, stated honestly:** D1b was measured
+empirically for the frozen design (C-A) only; there is no per-candidate
+breakdown. The extension to the other candidates is a mechanism argument, and it
+is strongest for the endpoint contrasts, which compare two windows and are
+directly exposed to a trend whose curvature differs between them. For the
+rolling-trend candidates (C-D, C-E) the inflation would have to *change across
+the sample* to bias the trend statistic, which a shared quadratic path does only
+partially. The magnitude for those candidates is untested.
+
+This does not rescue the design. The withdrawal rests on the identification
+failure demonstrated for the frozen design itself, and independently on the
+power and calibration findings below, which are measured per candidate. But
+"no candidate escapes it" would be stronger than the evidence carries, and the
+correct statement is that **the mechanism applies to every candidate and its
+magnitude is demonstrated for C-A.**
 
 The candidate comparison is in
 [`design-comparison/README.md`](design-comparison/README.md); none reached 80%

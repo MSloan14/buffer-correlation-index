@@ -20,7 +20,7 @@ easiest way to misread this repository.
 | | Component | Status |
 |---|---|---|
 | **Study 1** | Descriptive chartbook — are buffers thin, thinning, and thinning faster? | **Exploratory**, and labelled as such throughout |
-| **Study 2** | The ratchet question — after stress episodes, do buffers rebuild or step permanently lower? | **Criterion failed its identification check.** Not frozen, not running |
+| **Study 2** | The ratchet question — after stress episodes, do buffers rebuild or step permanently lower? | Criterion **passed** its identification check. Not yet frozen — one amendment required |
 | **Study 3** | The frozen prediction slate | **Public, binding, timestamped** |
 
 And one component that has been removed:
@@ -58,24 +58,27 @@ The commitment it honours, quoted verbatim from Index Spec v0.2 §0:
 evidence about the instrument, generated before the gate opened. No result,
 favourable or otherwise, informed it.
 
-## Study 2 failed its identification check, and is not running
+## Study 2 passed its identification check, and is not yet frozen
 
 The ratchet question survived the index withdrawal because it does not depend on
 cross-domain covariance. A criterion was drafted and — before freezing — tested
-against synthetic worlds.
+against synthetic worlds, on the principle that the index test's failure was one
+of identification and the replacement should be checked for the same disease.
 
-**It does not discriminate.** Pure accelerating decline, containing no ratchet at
-all, produced the ratchet signature **15.6%** of the time against **9.1%** for
-the best genuine ratchet world. The separation is **negative**. No cell in a
-27-point parameter grid achieved useful separation; 22 of 27 were inverted.
+**It discriminates.** A late-onset ratchet is separated from a pure accelerating
+decline by **+78.0 points** (90.2% versus 12.2%), against a +20 requirement. It
+is also specific: 99.6% "against H-R" in both mean-reversion worlds. If buffers
+genuinely rebuild, this criterion says so.
 
-Two further failures: a genuine ratchet shallower than the rebuild bar is
-reported as evidence *against* the hypothesis 96.9% of the time, and the
-standard control for secular decline makes a *consistent* ratchet — which is
-what the hypothesis actually claims — score uninformative.
+Three limitations survive, and one blocks freezing: **§1 and §6 of the draft
+describe different hypotheses** — §1 words the claim timelessly while the
+machinery tests a late-onset pattern. The single permitted amendment should
+resolve that before anything is frozen. The criterion is also blind to ratchets
+shallower than 10%, so an "against" verdict means "no ratchet ≥ 10%" rather than
+refutation.
 
-The draft specification committed in advance to publishing this outcome rather
-than proceeding. Full results:
+Full results, including a correction notice for an earlier version of this check
+that reached the opposite conclusion:
 [`results/ratchet-identification/`](results/ratchet-identification/).
 
 ## Study 3 — the prediction slate — is unaffected

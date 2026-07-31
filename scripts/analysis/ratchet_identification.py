@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Synthetic identification check for the ratchet criterion.
 
 Run BEFORE the ratchet specification is frozen, and before any contact with real
@@ -210,6 +210,7 @@ def simulate_series(rng: np.random.Generator, world: str) -> tuple[np.ndarray, l
         return x, injected
 
     step_pct = RATCHET_STEPS.get(world, 0.0)      # 0.0 for the M worlds
+    step_from_year = RATCHET_ONSET.get(world, FIRST_YEAR)
     decline = MILD_DECLINE_PER_YEAR if world.endswith("decl") else 0.0
 
     x = np.full(N_YEARS, BASE_LEVEL) - decline * t
@@ -220,7 +221,13 @@ def simulate_series(rng: np.random.Generator, world: str) -> tuple[np.ndarray, l
         depth = pre_level * float(rng.uniform(0.14, 0.20))   # clearly >= 1.5 sigma
         fall = int(rng.integers(1, 3))
         trough = min(onset + fall, N_YEARS - 1)
-        plateau = pre_level * (1.0 - step_pct)               # permanent level after
+        # The step applies only from step_from_year onward. For the R-const
+        # worlds that is FIRST_YEAR, so every episode ratchets. For the R-late
+        # worlds it is the era split, so episodes recover fully before it and
+        # step permanently down after -- which is the pattern section 6's
+        # early-rebuilt/late-not signature is actually defined to detect.
+        step_here = step_pct if (FIRST_YEAR + trough) >= step_from_year else 0.0
+        plateau = pre_level * (1.0 - step_here)              # permanent level after
         for i in range(onset + 1, trough + 1):
             x[i:] = pre_level - depth * ((i - onset) / max(fall, 1))
         rec_years = int(rng.integers(3, 6))
@@ -237,13 +244,39 @@ def simulate_series(rng: np.random.Generator, world: str) -> tuple[np.ndarray, l
 
 
 # Permanent step-down per episode, as a fraction of the pre-episode level.
-# The rebuild bar is 1 - REBUILD_FRACTION = 0.10, so R-05 sits below what the
-# criterion can detect and R-20 well above it. That is the point of the sweep.
+# The rebuild bar is 1 - REBUILD_FRACTION = 0.10, so a 5% step sits below what
+# the criterion can detect and 20% well above it. That is the point of the sweep.
+#
+# TWO FAMILIES, and the distinction is the whole ballgame:
+#
+#   R-const-*  every episode ratchets, from 1955 on. A CONSTANT-in-time ratchet.
+#   R-late-*   episodes recover fully before the era split and step permanently
+#              down after it. A LATE-ONSET ratchet.
+#
+# Section 6's signature is defined as "rebuilt early, not rebuilt late". That is
+# a late-onset pattern by construction. A constant ratchet yields (0, 0) rebuild
+# rates and is deliberately scored "uninformative" -- so the R-const family is
+# structurally incapable of producing the signature, whatever its severity.
+#
+# An earlier version of this script simulated ONLY the R-const family, and
+# concluded from its ~0% signature rate that the criterion cannot discriminate.
+# That conclusion was an artifact of testing the criterion exclusively against
+# the one ratchet family it is designed to exclude. Caught by independent
+# verification; the R-late family below is the correction.
 RATCHET_STEPS = {
-    "R-05": 0.05, "R-10": 0.10, "R-15": 0.15, "R-20": 0.20, "R-decl": 0.15,
+    "R-const-05": 0.05, "R-const-10": 0.10, "R-const-15": 0.15,
+    "R-const-20": 0.20, "R-decl": 0.15,
+    "R-late-10": 0.10, "R-late-15": 0.15, "R-late-20": 0.20,
 }
 
-WORLDS = ["R-05", "R-10", "R-15", "R-20", "R-decl",
+# First year in which the permanent step applies. Defaults to FIRST_YEAR
+# (constant ratchet); the R-late worlds switch on at the era split.
+RATCHET_ONSET = {
+    "R-late-10": ERA_SPLIT, "R-late-15": ERA_SPLIT, "R-late-20": ERA_SPLIT,
+}
+
+WORLDS = ["R-late-10", "R-late-15", "R-late-20",
+          "R-const-05", "R-const-10", "R-const-15", "R-const-20", "R-decl",
           "M-flat", "M-decl", "S-lin", "S-acc"]
 
 
@@ -316,16 +349,16 @@ def sensitivity_grid(rng: np.random.Generator, n_series: int) -> list[dict]:
                           rebuild_window=win)
                 cell = {"sigma": sig, "rebuild_fraction": frac,
                         "rebuild_window": win}
-                for world in ("R-15", "M-flat", "S-acc"):
+                for world in ("R-late-15", "M-flat", "S-acc"):
                     r = run_world(rng, world, n_series, **kw)
                     cell["%s_ratchet_pct" % world] = r["pct_ratchet_signature"]
                     cell["%s_uninformative_pct" % world] = r["pct_uninformative"]
                 rows.append(cell)
-                print("  sigma=%.1f frac=%.2f win=%d | R-15 %.1f%% | "
+                print("  sigma=%.1f frac=%.2f win=%d | R-late-15 %.1f%% | "
                       "M %.1f%% | S-acc %.1f%% | separation %+.1f"
-                      % (sig, frac, win, cell["R-15_ratchet_pct"],
+                      % (sig, frac, win, cell["R-late-15_ratchet_pct"],
                          cell["M-flat_ratchet_pct"], cell["S-acc_ratchet_pct"],
-                         cell["R-15_ratchet_pct"] - cell["S-acc_ratchet_pct"]))
+                         cell["R-late-15_ratchet_pct"] - cell["S-acc_ratchet_pct"]))
     return rows
 
 
@@ -365,26 +398,32 @@ def main() -> int:
                  r["pct_uninformative"], r["pct_against_HR"], r["pct_mixed"]))
 
     print("")
-    print("Sensitivity grid (R-15 / M-flat / S-acc)")
+    print("Sensitivity grid (R-late-15 / M-flat / S-acc)")
     rng = np.random.default_rng(ss[1])
     grid_rows = sensitivity_grid(rng, n_grid)
 
     elapsed = time.time() - t0
 
     by_world = {r["world"]: r for r in main_rows}
-    # Take the BEST-performing ratchet severity, which is the most generous
-    # reading available to the criterion. If it cannot separate even there, it
-    # cannot separate anywhere.
-    r_worlds = {k: v for k, v in by_world.items() if k.startswith("R-")}
-    best_r = max(r_worlds.values(), key=lambda v: v["pct_ratchet_signature"])
-    r_sig = best_r["pct_ratchet_signature"]
     s_acc_sig = by_world["S-acc"]["pct_ratchet_signature"]
     s_lin_uninf = by_world["S-lin"]["pct_uninformative"]
+
+    # The verdict must be judged against the LATE-ONSET family, because that is
+    # the pattern section 6's signature is defined to detect. Judging it against
+    # constant ratchets asks whether the criterion detects the thing it
+    # explicitly declines to count, and answers "no" by construction.
+    late = {k: v for k, v in by_world.items() if k.startswith("R-late")}
+    best_late = max(late.values(), key=lambda v: v["pct_ratchet_signature"])
+    r_sig = best_late["pct_ratchet_signature"]
     discriminates = (r_sig - s_acc_sig) >= 20.0
+
+    const = {k: v for k, v in by_world.items() if k.startswith("R-const")}
+    best_const = max(const.values(), key=lambda v: v["pct_ratchet_signature"])
+
     # A shallow but genuine ratchet that the criterion reads as evidence
     # AGAINST the hypothesis is a false negative that actively misleads.
-    shallow_against = by_world["R-05"]["pct_against_HR"]
-    deep_uninformative = by_world["R-20"]["pct_uninformative"]
+    shallow_against = by_world["R-const-05"]["pct_against_HR"]
+    deep_uninformative = by_world["R-const-20"]["pct_uninformative"]
 
     write_csv(outdir / "worlds.csv", main_rows)
     write_csv(outdir / "sensitivity_grid.csv", grid_rows)
@@ -407,14 +446,16 @@ def main() -> int:
             "last_year": LAST_YEAR,
         },
         "headline": {
-            "best_ratchet_world": best_r["world"],
-            "ratchet_signature_pct_best_R": r_sig,
+            "best_late_onset_world": best_late["world"],
+            "ratchet_signature_pct_best_late_onset": r_sig,
             "ratchet_signature_pct_S_acc": s_acc_sig,
-            "uninformative_pct_S_lin": s_lin_uninf,
-            "separation_bestR_minus_Sacc": r_sig - s_acc_sig,
+            "separation_lateR_minus_Sacc": r_sig - s_acc_sig,
             "criterion_discriminates": bool(discriminates),
+            "best_constant_ratchet_world": best_const["world"],
+            "ratchet_signature_pct_best_constant": best_const["pct_ratchet_signature"],
+            "uninformative_pct_S_lin": s_lin_uninf,
             "pct_shallow_ratchet_read_as_against_HR": shallow_against,
-            "pct_deep_ratchet_read_as_uninformative": deep_uninformative,
+            "pct_deep_constant_ratchet_read_as_uninformative": deep_uninformative,
         },
         "worlds": main_rows,
         "sensitivity_grid": grid_rows,
@@ -424,13 +465,15 @@ def main() -> int:
 
     print("")
     print("HEADLINE")
-    print("  best ratchet world          : %s at %.1f%%" % (best_r["world"], r_sig))
-    print("  ratchet signature in S-acc  : %.1f%%   <- FALSE POSITIVES" % s_acc_sig)
-    print("  separation (best R - S-acc) : %+.1f points" % (r_sig - s_acc_sig))
-    print("  S-lin rendered uninformative: %.1f%%" % s_lin_uninf)
-    print("  shallow ratchet read as AGAINST H-R : %.1f%%" % shallow_against)
-    print("  deep ratchet read as uninformative  : %.1f%%" % deep_uninformative)
+    print("  best LATE-ONSET ratchet     : %s at %.1f%%" % (best_late["world"], r_sig))
+    print("  ratchet signature in S-acc  : %.1f%%   <- false positives" % s_acc_sig)
+    print("  separation (late R - S-acc) : %+.1f points" % (r_sig - s_acc_sig))
     print("  CRITERION DISCRIMINATES     : %s" % discriminates)
+    print("")
+    print("  best CONSTANT ratchet       : %s at %.1f%%  (structurally ~0 by design)"
+          % (best_const["world"], best_const["pct_ratchet_signature"]))
+    print("  shallow ratchet read as AGAINST H-R : %.1f%%" % shallow_against)
+    print("  deep constant ratchet uninformative : %.1f%%" % deep_uninformative)
     print("")
     print("elapsed: %.1f s" % elapsed)
     print("results in: %s" % outdir)

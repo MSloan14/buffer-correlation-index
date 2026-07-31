@@ -1,25 +1,32 @@
 # Ratchet Pre-Specification v1.0 — DRAFT
 
-> # ⚠ THE IDENTIFICATION CHECK FAILED. DO NOT FREEZE THIS.
+> # IDENTIFICATION CHECK PASSED — one amendment required before freezing
 >
-> The synthetic check required by §8.2 has been run, and the criterion below
-> **does not discriminate a ratchet from an accelerating secular decline.**
-> Pure accelerating decline produces the ratchet signature **15.6%** of the
-> time against **9.1%** for the best genuine ratchet world — a separation of
-> **−6.5 points**, in the wrong direction. No cell in a 27-point parameter grid
-> achieves useful separation; 22 of 27 are inverted.
+> The synthetic check required by §8.2 has been run. **The criterion
+> discriminates**: a late-onset ratchet is separated from a pure accelerating
+> decline by **+78.0 points** (90.2% versus 12.2%), against a required +20. It
+> is also specific — 99.6% "against H-R" in both mean-reversion worlds. The
+> spec's constants (1.5σ, 90%, 7yr) sit in a good region of the parameter grid.
 >
-> Two further failures: a genuine ratchet shallower than the rebuild bar is
-> reported as evidence **against** H-R 96.9% of the time, and §6's
-> secular-decline control makes a *consistent* ratchet — which is what H-R
-> actually claims — score uninformative or mixed.
->
-> **Per §8.2, the commitment is to publish this rather than proceed.** Full
-> results and diagnosis:
+> **An earlier version of this banner said the opposite.** That was an error in
+> the simulation, not the criterion: it tested only *constant-in-time* ratchets,
+> which §6 deliberately scores "uninformative", and read the resulting ~0%
+> detection as failure. Caught by independent verification. Full account in
 > [`../results/ratchet-identification/README.md`](../results/ratchet-identification/README.md).
 >
-> The text below is retained as the specification that was tested and found
-> wanting. It is a record, not a proposal.
+> **Three limitations survive, and one blocks freezing:**
+>
+> 1. **§1 and §6 describe different hypotheses.** §1 words H-R timelessly —
+>    "each episode steps the buffer permanently lower" — while §6, §7 and §8.1
+>    all test a **late-onset** pattern. The single amendment permitted by §9
+>    should re-scope §1 to late-onset ratcheting. **Do not freeze until this is
+>    resolved**; the record must be unambiguous about which hypothesis was tested.
+> 2. **Blind below a 10% step.** "Against H-R" means "no ratchet ≥ 10%", not
+>    refutation of shallower ratcheting. Must be stated in those words.
+> 3. **The detector fires on episode-free trending series** (~11 pseudo-episodes
+>    per series, all false alarms). Report episode counts as a diagnostic. A
+>    violent smooth late collapse also fakes the signature 40–79% of the time —
+>    a genuine identification boundary to disclose.
 
 ---
 
