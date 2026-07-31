@@ -14,25 +14,71 @@ with seed `20260728`. Full outputs and reproduction instructions are in
 
 ---
 
-## Correction notice (2026-07-28, same day)
+## ERRATA (2026-07-28, reaffirmed 2026-07-31)
 
-An earlier draft of this document reported that the crisis-exclusion leakage was
-**not distinguishable from zero**. That was wrong, on two independent counts,
-and item 5 has been rewritten. Both errors are recorded here rather than
-quietly amended, because a disclosure document that silently revises itself is
-worth nothing.
+A published claim in this document was wrong and is retracted. The original text
+is struck through below rather than deleted, so that what was claimed remains
+legible alongside the correction.
 
-1. **A code defect.** The no-contamination control accepted a `crisis_boost`
-   argument that was never passed through to the data generator. Both arms of
-   the control therefore produced *contaminated* data, and the reported "net
-   leakage" was the difference between two independent draws of the same
-   quantity — necessarily zero. The control was inert while appearing to work.
-2. **A wrong calendar layout.** The layout had been inferred, not supplied. The
-   author has since provided the actual one, and it reverses the conclusion.
+### Retracted
 
-Corrected, the leakage is **large, statistically unambiguous, and biases toward
-CONFIRM** — the direction originally suspected. The earlier null result should
-not be cited.
+> ~~**Crisis-exclusion leakage — contrary to the prior expectation.** The
+> expectation recorded before this simulation was that the leakage biases toward
+> CONFIRM, i.e. that it is thesis-helping. **The simulation does not support
+> that.** Net leakage: **−0.0040** (se 0.0050) at Δρ = 0 and **+0.0046**
+> (se 0.0050) at Δρ = 0.15. **Neither net figure is distinguishable from zero**;
+> both are within one standard error.~~
+
+### Cause
+
+Two independent faults, one of them a defect in the measuring instrument itself:
+
+1. **The control never ran.** `simulate()` accepted a `crisis_boost` argument
+   and never passed it through to the data generator. Both arms of the
+   no-contamination control therefore produced *contaminated* data, so the
+   reported "net leakage" was the difference between two independent draws of
+   **the same quantity** — necessarily zero, by construction. The control was
+   inert while appearing to work, which is the failure mode least likely to be
+   noticed.
+2. **The calendar layout was inferred, not supplied.** The author later provided
+   the actual layout, under which the contamination is one-sided rather than
+   cancelling.
+
+### Corrected finding
+
+| | Value |
+|---|---|
+| Net leakage at Δρ = 0 | **+0.0529** (se 0.0033) |
+| Net leakage at Δρ = 0.15 | **+0.0557** (se 0.0036) |
+| Distance from zero | **~16 standard errors** |
+| Direction | **toward confirmation** — the exclusion rule helps the hypothesis it tests |
+| Share of the excess false-positive rate | **+0.051 of +0.080** |
+
+The direction originally suspected was right; the measurement that appeared to
+refute it was broken.
+
+### The remedy is not a free win
+
+Excluding a difference when *either* endpoint year falls in the crisis set
+removes the contamination, and it costs:
+
+| | As specified | Endpoint-based exclusion |
+|---|---|---|
+| False-positive rate at zero | 0.186 | **0.108** |
+| Power at Δρ = 0.15 | 0.343 | **0.206** |
+| LR for a non-confirmation | 0.79 | **0.89** |
+
+It restores size, costs a third of the power, and makes a non-confirmation *less*
+informative. It should be adopted because a test that manufactures a tenth of its
+own detection threshold is indefensible — not because it buys evidential power.
+It does not.
+
+### Provenance
+
+**Found by independent verification, not by the primary run.** The primary run
+produced the erroneous figure and reported it with confidence. This is recorded
+because a disclosure document that silently revises itself is worth nothing, and
+because the failure is evidence about the process, not just about one number.
 
 ---
 
@@ -42,7 +88,7 @@ not be cited.
 |---|---|---|
 | 1 | Endpoint blocks hold 7 and 6 observations | Structural |
 | 2 | Empirical MDE is delta rho ~= 0.52, far outside any plausible effect | **Severe** |
-| 3 | The four-part conjunction adds almost nothing to C2 alone | Substantive |
+| 3 | The four-part conjunction adds 0.012-0.066 over C2 alone | Substantive |
 | 4 | The test rejects 18.0% of the time when nothing is happening, against a 10% nominal | **Severe** |
 | 5 | Crisis exclusion leaks one-sidedly into B3ex, biasing +0.053 toward CONFIRM | **Severe** |
 | 6 | A noise domain shrinks the recovered effect ~25% | Substantive |

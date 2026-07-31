@@ -1,167 +1,183 @@
-# Buffer-Correlation Index — pre-registration
+# Buffer depletion — pre-registration, chartbook, and prediction slate
 
-A pre-registered test of the hypothesis that **US collective buffers have been
-depleting in increasingly correlated fashion over 2000–2026**, together with a
-slate of dated, scoreable predictions that divide that thesis from an
-adaptive-resilience null.
-
-The point of this repository is that the specification and the predictions were
-frozen and published **before** the data that will test them was touched. That
-ordering is the whole warrant. Everything else here exists to make it checkable.
+**Stated prior.** The author expected to find that collective buffers — strategic
+reserves, fiscal room, hospital capacity, associational capacity — are depleted,
+and believes buffer-holding is systematically undervalued. That prior motivated
+the project and is not neutral. The methods here exist to make the work usable
+by a reader who holds the opposite prior: criteria frozen before data contact,
+failures published rather than buried, findings checked by adversarial
+verification that has already overturned one of them, and the competing
+efficiency explanation printed beside every chart rather than in a footnote.
+Judge the process; the conclusions are downstream of it.
 
 ---
 
-## The one fact that matters most
+## What this is
 
-**No historical joint series data had been examined at the time of this commit.**
-No component series was fetched, opened, or inspected. Every number in the power
-simulation is **synthetic** — generated from a specified data-generating process
-to measure what the design can detect, not what the world contains.
+Three components, with three different standings. Conflating them would be the
+easiest way to misread this repository.
 
-The specification's own blindness disclosure (Spec v0.2 §2) is franker than this
-summary and should be read instead of it: perfect blindness is not claimed, the
-residual contamination is named, and the mitigations are stated.
+| | Component | Status |
+|---|---|---|
+| **Study 1** | Descriptive chartbook — are buffers thin, thinning, and thinning faster? | **Exploratory**, and labelled as such throughout |
+| **Study 2** | The ratchet question — after stress episodes, do buffers rebuild or step permanently lower? | **Criterion failed its identification check.** Not frozen, not running |
+| **Study 3** | The frozen prediction slate | **Public, binding, timestamped** |
 
-## Binding status — read this before citing anything
+And one component that has been removed:
 
-The two frozen documents do **not** have the same standing.
+| | Component | Status |
+|---|---|---|
+| ~~Index test~~ | Cross-domain buffer-correlation index | **WITHDRAWN as not identified** |
 
-### Prediction Slate v1.1 — binding
+## The index test is withdrawn
 
-[`prereg/slate-v1.1.md`](prereg/slate-v1.1.md) **is the binding
-pre-registration.** Its predictions, conditional probabilities, resolution dates
-and resolution feeds are fixed as of this commit.
+The pre-registered correlated-drain test has been withdrawn. Not as
+underpowered — though it was — but as **not identified**: the statistic cannot
+distinguish the effect it was built to detect from an artifact it generates
+itself.
 
-**P5's resolution window opened 2026-07-28** and runs to 2026-12-31.
+The headline statistic differences each series to strip out shared trend. That
+works only if the shared trend is linear. A shared depletion path with
+**curvature** survives differencing, and is read as rising co-movement. In
+simulation, identical depletion paths across every domain with fully independent
+noise and no rise in genuine co-movement produced Δρ of **+0.358** and confirmed
+**33%** of the time.
 
-### Index Spec v0.2 — frozen, but superseded pending design review
+The confound is a property of the differencing family, so no candidate design
+examined escapes it. More data estimates the confounded quantity more precisely
+without separating it.
 
-[`prereg/spec-v0.2.md`](prereg/spec-v0.2.md) is frozen, and it is **superseded
-pending a pre-data design review.**
-
-A synthetic power simulation — run before any contact with real data — found the
-design **severely underpowered**. Against a true rise in mean pairwise
-correlation of 0.15:
-
-| | Result |
-|---|---|
-| P(CONFIRM) when the effect is real | **0.287** |
-| P(CONFIRM) when there is **no effect at all** | **0.124** |
-| Minimum detectable effect at 80% power | **Δρ ≈ 0.52** |
-| **Likelihood ratio for a non-confirmation** | **0.81** |
-
-That last row is the one that matters. A disconfirmation from this design shifts
-the odds against the hypothesis by about a fifth — which is to say, almost not at
-all. The instrument is close to incapable of producing evidence in either
-direction, and pre-committing to it buys correspondingly little.
-
-A revised specification **v0.3**, or a documented finding that the claim is **not
-testable at adequate power with available annual series**, will follow. Either
-outcome will be published here.
-
-The design review also found a confounder that no amount of extra data would fix:
-a shared depletion path with **curvature** is read by this statistic as rising
-co-movement, even when genuine co-movement is unchanged. See
-[`REVIEWER-NOTES.md`](REVIEWER-NOTES.md), item 9.
-
-### v0.1 and v1.0 — provenance only
-
-[`prereg/spec-v0.1.md`](prereg/spec-v0.1.md) and
-[`prereg/slate-v1.0.md`](prereg/slate-v1.0.md) are included **solely as
-provenance** for a single pre-timestamp revision cycle. Neither was ever
-externally timestamped. They are here so the v0.1→v0.2 and v1.0→v1.1 deltas are
-auditable rather than asserted; each superseding document carries a change log
-tagging every change as thesis-helping, null-helping, or neutral-precision.
-
-### P6's instrument is pinned
-
-P6 measures the **quarterly companion as defined in Spec v0.2 §7 (S8)** —
-the quarterly-native subset of strategic reserve, financial, fiscal debt/GDP and
-household, 6 pairs, 40-quarter trailing windows.
-
-**That instrument remains pinned regardless of any later revision to the
-specification**, including v0.3. The slate is the binding document; a prediction
-whose measuring instrument could be redefined after the fact would not be a
-prediction.
-
-## The disconfirmation commitment
-
-Quoted verbatim from Spec v0.2 §0:
+The withdrawal is in [`results/withdrawal-note.md`](results/withdrawal-note.md).
+The commitment it honours, quoted verbatim from Index Spec v0.2 §0:
 
 > *If the pre-specified analysis returns flat or domain-idiosyncratic
-> cross-domain covariance over 2000–2026, the correlated-drain claim is withdrawn
-> from the framework. No hedging into "not yet measurable."*
+> cross-domain covariance over 2000–2026, the correlated-drain claim is
+> withdrawn from the framework. No hedging into "not yet measurable."*
 
-Operationally: **anything short of all four CONFIRM criteria is a
-disconfirmation.** There is no intermediate verdict, and no "underpowered"
-escape hatch — the withdrawal happens whether the record shows "flat and
-well-powered" or "flat and unpowered."
+**The data was never fetched.** The withdrawal rests entirely on synthetic
+evidence about the instrument, generated before the gate opened. No result,
+favourable or otherwise, informed it.
 
-The branch language for both outcomes is already written, blind, in
-[`phase-4-precommitment.md`](phase-4-precommitment.md).
+## Study 2 failed its identification check, and is not running
+
+The ratchet question survived the index withdrawal because it does not depend on
+cross-domain covariance. A criterion was drafted and — before freezing — tested
+against synthetic worlds.
+
+**It does not discriminate.** Pure accelerating decline, containing no ratchet at
+all, produced the ratchet signature **15.6%** of the time against **9.1%** for
+the best genuine ratchet world. The separation is **negative**. No cell in a
+27-point parameter grid achieved useful separation; 22 of 27 were inverted.
+
+Two further failures: a genuine ratchet shallower than the rebuild bar is
+reported as evidence *against* the hypothesis 96.9% of the time, and the
+standard control for secular decline makes a *consistent* ratchet — which is
+what the hypothesis actually claims — score uninformative.
+
+The draft specification committed in advance to publishing this outcome rather
+than proceeding. Full results:
+[`results/ratchet-identification/`](results/ratchet-identification/).
+
+## Study 3 — the prediction slate — is unaffected
+
+**Prediction Slate v1.1 is the binding pre-registration**, frozen and publicly
+timestamped. Predictions, conditional probabilities, resolution dates and feeds
+are fixed. **P5's resolution window opened 2026-07-28** and runs to 2026-12-31.
+
+**P6 stands.** It is measured by the quarterly companion of Index Spec v0.2 §7
+(S8) and will be scored at resolution exactly as defined, on 2029-03-31. A
+frozen prediction does not get withdrawn because the project around it changed
+shape. The disclosed caveat is that the curvature confound applies to it too, so
+a RISE outcome will be consistent with rising co-movement *and* with shared
+acceleration — recorded now, before resolution, rather than raised afterwards by
+whichever side it suits.
+
+Spec v0.1 and Slate v1.0 are retained solely as provenance for a single
+pre-timestamp revision cycle.
+
+## The data gate
+
+**No real series has been fetched, opened, or inspected at any point.** Every
+number in this repository is synthetic.
+
+The gate is enforced in code, not by good intentions:
+[`scripts/fetch/fetch_all.py`](scripts/fetch/fetch_all.py) requires both an
+explicit `--apply` flag and a `data/.gate-open` file created by hand. Identifiers
+in [`data/SOURCES.md`](data/SOURCES.md) are recorded as **unverified**, because
+verifying them against source pages would itself have been data contact — a
+series page renders the current value and the full history.
 
 ## Contents
 
 | Path | What it is |
 |---|---|
-| [`prereg/`](prereg/) | The frozen documents. Append-only: never edited, only superseded by a new dated version. |
-| [`REVIEWER-NOTES.md`](REVIEWER-NOTES.md) | Known limitations, disclosed before data contact. **Not part of the pre-registration.** Includes a correction notice for a defect found in the simulation itself. |
-| [`results/power-simulation/`](results/power-simulation/) | What the frozen design can and cannot detect. Synthetic data only. |
-| [`results/design-comparison/`](results/design-comparison/) | Six candidate designs compared, to inform whether a revision can reach adequate power. Exploratory; changes nothing frozen. |
-| [`phase-4-precommitment.md`](phase-4-precommitment.md) | Results-blind branch language for the write-up. **Explicitly not part of the pre-registration**; a self-binding writing constraint, drafted before the result exists. |
+| [`prereg/`](prereg/) | Frozen documents. Append-only: never edited, only superseded. |
+| [`results/withdrawal-note.md`](results/withdrawal-note.md) | Why the index test was withdrawn. |
+| [`results/ratchet-identification/`](results/ratchet-identification/) | Why Study 2's criterion was not frozen. |
+| [`results/power-simulation/`](results/power-simulation/) | What the withdrawn design could and could not detect. |
+| [`results/design-comparison/`](results/design-comparison/) | Six candidate designs compared. None rescued it. |
+| [`REVIEWER-NOTES.md`](REVIEWER-NOTES.md) | Known limitations, and an errata for a published finding that was wrong. Not part of the pre-registration. |
+| [`docs/domain-6-options.md`](docs/domain-6-options.md) | Open decision on the health-capacity series. |
+| [`phase-4-precommitment.md`](phase-4-precommitment.md) | Results-blind branch language, drafted before any result existed. Explicitly not part of the pre-registration. |
 | [`DATA_TERMS.md`](DATA_TERMS.md) | What may be committed, per source. |
-| [`CHECKSUMS.sha256`](CHECKSUMS.sha256) | SHA-256 of every file in `prereg/`. Verify with `sha256sum -c` or [`scripts/checksums.py`](scripts/checksums.py). |
-| [`scripts/`](scripts/) | All analysis code. Fetch scripts will be committed alongside the data when Phase 3 runs. |
+| [`CHECKSUMS.sha256`](CHECKSUMS.sha256) | SHA-256 of everything in `prereg/`. |
 
-Data and code are committed deliberately. An audit trail that omits its inputs
-is not an audit trail. The exception is proprietary data that cannot be
-redistributed; [`DATA_TERMS.md`](DATA_TERMS.md) states what is committed instead
-and what that costs.
+## What went wrong, kept in the open
+
+Two published findings in this repository were wrong and have been corrected in
+place, with the originals legible:
+
+- A crisis-exclusion leakage result was reported as null. The control that
+  produced it was inert — it accepted a parameter it never passed to the data
+  generator, so both arms ran contaminated data and differenced to zero by
+  construction. Corrected, the bias is **+0.053 toward confirmation**. See the
+  errata in [`REVIEWER-NOTES.md`](REVIEWER-NOTES.md).
+- A machine-readable export mis-parsed, inverting a calibration ranking, while
+  the rendered tables it was derived from were correct.
+
+Both were found by adversarial verification rather than by the analysis that
+produced them. That is the argument for the method, and it is why the failures
+are documented rather than tidied away.
 
 ## Licensing
 
 | What | Licence |
 |---|---|
-| Code — [`scripts/`](scripts/) and any other source | **MIT**, see [`LICENSE`](LICENSE) |
+| Code — [`scripts/`](scripts/) | **MIT**, see [`LICENSE`](LICENSE) |
 | Prose and outputs — [`prereg/`](prereg/), [`results/`](results/), documentation | **CC BY 4.0**, see [`LICENSE-DOCS`](LICENSE-DOCS) |
 
-Third-party data under `data/` is covered by **neither**; each series carries its
-own source's terms.
+Third-party data under `data/` is covered by neither; each series carries its own
+source's terms.
 
 ## How to verify the timestamp
 
-The claim is: *the specification and the slate were fixed before the data was
-touched.* Three ways to check, weakest first.
-
-1. **Commit dates.** `git log --format='%H %ad %s' --date=iso`. Weakest form:
-   git commit dates are supplied by the committer's machine and can be set to
-   anything. Listed only for completeness — **this proves nothing on its own.**
-2. **The GitHub release.** The tag `prereg-v1` and its release are timestamped by
-   GitHub, a third party with no stake in the outcome, and the release body
-   restates the binding status.
+1. **Commit dates.** `git log --format='%H %ad %s' --date=iso`. Weakest form —
+   commit dates come from the committer's machine and can be set to anything.
+   **This proves nothing on its own.**
+2. **The GitHub release.** Tag `prereg-v1`, timestamped by a third party.
 3. **The OSF registration.** *(placeholder — URL and DOI to be inserted)*
-   Open-Ended Registration at [osf.io](https://osf.io), containing the same five
-   documents. **OSF registrations are immutable**, which makes this the strongest
-   link in the chain: unlike a git history, it cannot be rewritten by the author.
+   **OSF registrations are immutable**, which makes this the strongest link:
+   unlike a git history, the author cannot rewrite it.
 
    > **OSF URL: _to be added_**
    > **OSF DOI: _to be added_**
 
-To check the frozen documents are unaltered since the freeze:
+To check the frozen documents are unaltered:
 
 ```
 python scripts/checksums.py verify
 ```
 
-## Score us
+## Score it
 
-The slate is public, dated, and third-party timestamped. Every prediction carries
-an exactly-defined YES event, a resolution date, a resolution feed, and both
-conditional probabilities — P(YES | thesis) and P(YES | null) — so the gap
-between them can be scored against us rather than argued about.
+Every prediction carries an exactly-defined YES event, a resolution date, a
+resolution feed, and both conditional probabilities — P(YES | thesis) and
+P(YES | null) — so the gap between them can be scored against the author rather
+than argued about.
 
 Resolutions are adjudicated strictly against the written definitions.
 Annotations are permitted; redefinitions are not. Disputes go to an adversarial
 review, never to the pro-case.
 
-**The standing offer, which prints with the slate wherever it appears: score us.**
+The standing offer, printed with the slate wherever it appears, in the slate's
+own words: **"score us."**

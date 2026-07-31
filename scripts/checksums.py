@@ -44,6 +44,13 @@ CHECKSUM_FILE = REPO_ROOT / "CHECKSUMS.sha256"
 # does not read as tampering.
 EXCLUDED_NAMES = {".gitkeep"}
 
+# Documents still marked DRAFT are, by definition, not frozen. They may live in
+# prereg/ while under review, but recording them here would assert a freeze that
+# has not happened -- and would make the checksum file churn on every edit,
+# training the reader to ignore a failing verify. On ratification a draft is
+# renamed to drop the suffix, at which point it enters the record.
+EXCLUDED_SUFFIXES = ("-DRAFT.md",)
+
 CHUNK_SIZE = 1024 * 1024
 
 
@@ -63,7 +70,9 @@ def collect_files() -> list[Path]:
     found = [
         p
         for p in TARGET_DIR.rglob("*")
-        if p.is_file() and p.name not in EXCLUDED_NAMES
+        if p.is_file()
+        and p.name not in EXCLUDED_NAMES
+        and not p.name.endswith(EXCLUDED_SUFFIXES)
     ]
     return sorted(found, key=lambda p: p.relative_to(REPO_ROOT).as_posix())
 
