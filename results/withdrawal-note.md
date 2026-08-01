@@ -1,9 +1,7 @@
 # Withdrawal of the correlated-drain claim
 
-> **DRAFT — awaiting review.** Not yet ratified. The substance is settled; the
-> wording is not.
-
-**Date:** 2026-07-31. **Status:** written before any contact with real data.
+**Date:** 2026-07-31, ratified 2026-08-01. **Status:** written before any contact
+with real data.
 
 ---
 
@@ -13,13 +11,29 @@ Hypothesis [H], from Index Spec v0.2 §0: *US collective buffers have been
 draining in increasingly correlated fashion over 2000–2026.*
 
 **That claim is withdrawn.** The instrument built to test it does not identify
-the quantity it was meant to measure, and no version of it does.
+the quantity it was meant to measure. Every alternative design examined has the
+same problem, and the reason is common to all of them, so the withdrawal is not
+expected to survive a better implementation.
 
-## Withdrawn as not identified, which is stronger than underpowered
+## What this is a statement about
 
-The pre-registered design is severely underpowered — that alone would be grounds
-for reporting the claim untestable. But the binding defect is worse than a power
-problem, and the distinction matters.
+This is a statement about a measuring instrument, not about the world.
+
+The test cannot tell rising co-movement apart from a shared trend that bends.
+That is a fact about the statistic. It is **not** evidence that buffers have
+failed to drain together, and nothing here should be read as showing the
+hypothesis false. What can be said is narrower: this design could not have told
+the difference, so any answer it produced would not have been worth having.
+
+The claim is withdrawn because it is unsupported, not because it is refuted.
+Those are different, and the difference is not a hedge — an unsupported claim
+does not get to stay in the framework in weaker language.
+
+## Not identified, which is worse than underpowered
+
+The design is also severely underpowered, which on its own would be grounds for
+reporting the claim untestable. The binding defect is worse than that, and the
+distinction matters.
 
 The headline statistic is the change in mean pairwise correlation between
 first-differenced domain series. Differencing is meant to strip out shared
@@ -107,7 +121,7 @@ are deterministic functions of the same 28 pairwise differences that produce the
 headline estimate. A robustness check computed from the same numbers as the
 statistic it checks is only weakly independent of it.
 
-## The commitment is honored in its strongest available form
+## The commitment
 
 Spec v0.2 §0, verbatim:
 
@@ -115,23 +129,16 @@ Spec v0.2 §0, verbatim:
 > cross-domain covariance over 2000–2026, the correlated-drain claim is
 > withdrawn from the framework. No hedging into "not yet measurable."*
 
-The claim is withdrawn. Note what did **not** happen: the data was never
-fetched, so no result — favourable or otherwise — informed this decision. The
-withdrawal rests entirely on synthetic evidence about the instrument, generated
+The claim is withdrawn. The data was never fetched, so no result influenced the
+decision either way. It rests entirely on synthetic tests of the instrument, run
 before the gate opened.
 
-Withdrawing after seeing a disappointing number is a commitment kept.
-Withdrawing before looking, on the ground that the instrument could not have
-told the truth from an artifact, is the same commitment kept in a form that
-leaves no room to argue the author was pushed.
-
-The clause the commitment specifically forbids — "no hedging into *not yet
-measurable*" — is worth addressing directly, because "not identified" could be
-mistaken for exactly that hedge. It is not. *Not yet measurable* claims the
-hypothesis stands and awaits better instruments. **This withdraws the claim.**
-It is not retained in weaker language, not deferred, and may not be re-asserted
-over 2000–2026 by different methods without a new, versioned, externally
-timestamped specification.
+"Not identified" could be mistaken for the hedge that clause bans, so worth being
+explicit. *Not yet measurable* would mean the hypothesis stands and is waiting
+for a better instrument. That is not what this says. The claim is withdrawn: not
+kept in weaker language, not deferred, and not available to be re-asserted over
+2000–2026 by some other method without a new versioned specification, externally
+timestamped like this one.
 
 ## P6 stands
 

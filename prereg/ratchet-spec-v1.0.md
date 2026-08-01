@@ -54,6 +54,27 @@ specification must carry them.
    (R 50.5% versus S-acc 66.0%). It is not the frozen setting and is recorded
    so the avoidance is deliberate rather than lucky.
 
+## Ceiling on what a confirmation may claim
+
+Fixed here, before any data is seen, so it cannot be negotiated afterwards.
+
+Limitation 4 sets a hard limit on the language. A smooth late collapse with no
+episodes at all fakes the signature 40–79% of the time, so the test cannot show
+that the episodes are what caused the permanent loss. It can only show that the
+pattern changed between eras.
+
+**The strongest claim a confirmation supports is: "buffers stopped rebuilding in
+the late era."**
+
+**It never supports: "episodes cause permanent steps."** Nor any wording that
+implies the drawdowns are the mechanism — "each crisis ratchets the buffer
+down", "shocks now leave permanent damage", or similar. Those are causal claims
+about episodes. This design cannot separate them from a buffer that was falling
+smoothly anyway.
+
+This ceiling binds every write-up, summary, abstract and public statement made
+under this specification, whatever the result.
+
 **Why this document exists.** The correlated-drain index test has been withdrawn
 as not identified (see [`../results/withdrawal-note.md`](../results/withdrawal-note.md)).
 The ratchet question survives that withdrawal because it does not depend on
@@ -83,31 +104,36 @@ question is what happens *after* a drawdown, not whether drawdowns happen.
 > rebuild to pre-episode levels. Depletion ratchets — each episode steps the
 > buffer permanently lower."*
 >
-> **Why.** That wording is timeless: it claims every episode ratchets, in every
-> era. §6, §7 and §8.1 do not test it. They test a *change* in rebuild
-> behaviour — early-rebuilt versus late-not — and a consistently ratcheting
-> domain yields (0, 0) rebuild rates, which §6 deliberately scores
-> **uninformative** to avoid confusing ratcheting with secular decline. The
-> document therefore claimed one hypothesis and tested another. The synthetic
-> check surfaced this: a constant-in-time ratchet was scored uninformative or
-> mixed in 77% of runs at the deepest severity simulated.
+> **What was wrong with it.** The old wording is timeless. It says every episode
+> ratchets, in every era. The test does not check that. §6, §7 and §8.1 all
+> compare early episodes against late ones, so what they detect is a *change* in
+> rebuild behaviour. A domain that ratcheted in every era rebuilds in neither,
+> and §6 scores that "uninformative" on purpose, to stop secular decline being
+> read as a ratchet. The document claimed one thing and measured another. The
+> synthetic check made this visible: a constant-in-time ratchet scored
+> uninformative or mixed in 77% of runs at the deepest severity simulated.
 >
-> **Direction of effect: null-helping.** This narrows the claim. Timeless
-> ratcheting is the broader hypothesis; late-onset ratcheting is a strict
-> subset, and a domain that has ratcheted consistently since 1950 now scores
-> uninformative rather than supporting H-R. The amendment makes the claim
-> harder to support, not easier.
+> **Direction of effect: scope-narrowing, and thesis-enabling.** Both, and they
+> do not conflict.
 >
-> **The alternative was worse.** Re-scoping §6 to detect timeless ratcheting
-> would mean abandoning the early-versus-late comparison, which is the only
-> control standing between this study and the confound that killed the index
-> test. Given a choice between a narrower claim and a weaker control, the
-> narrower claim is correct.
+> *Narrowing,* because the timeless claim is broader. A domain that has ratcheted
+> steadily since 1950 now scores uninformative instead of counting as support.
 >
-> **What is given up, stated plainly.** A domain that has been ratcheting
-> steadily for seventy years is invisible to this test. That is a real
-> limitation of what H-R can now claim, not a technicality, and it must be
-> carried into any write-up.
+> *Enabling,* because under the old wording a confirmation was impossible by
+> construction — the pattern that text described is the pattern §6 refuses to
+> count. Re-scoping is what makes a confirmation reachable at all. That has to be
+> said openly: **this amendment removes a structural barrier to confirming the
+> author's own hypothesis.** It was adopted for identification, not for
+> evidential gain. A false H-R is no more likely to be confirmed than before; a
+> true one is now capable of being confirmed.
+>
+> **Why not change §6 instead.** Rewriting §6 to catch timeless ratcheting means
+> dropping the early-versus-late comparison. That comparison is the only control
+> separating this study from the confound that killed the index test. A narrower
+> claim beats a weaker control.
+>
+> **What this gives up.** A domain that has been ratcheting steadily for seventy
+> years is invisible to this test. Any write-up has to carry that.
 
 ## 2. Knowledge-state disclosure
 
