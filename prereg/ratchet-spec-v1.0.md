@@ -1,50 +1,58 @@
 # Ratchet Pre-Specification v1.0 — DRAFT
 
-> # IDENTIFICATION CHECK PASSED — one amendment required before freezing
->
-> The synthetic check required by §8.2 has been run. **The criterion
-> discriminates**: a late-onset ratchet is separated from a pure accelerating
-> decline by **+78.0 points** (90.2% versus 12.2%), against a required +20. It
-> is also specific — 99.6% "against H-R" in both mean-reversion worlds. The
-> spec's constants (1.5σ, 90%, 7yr) sit in a good region of the parameter grid.
->
-> **An earlier version of this banner said the opposite.** That was an error in
-> the simulation, not the criterion: it tested only *constant-in-time* ratchets,
-> which §6 deliberately scores "uninformative", and read the resulting ~0%
-> detection as failure. Caught by independent verification. Full account in
-> [`../results/ratchet-identification/README.md`](../results/ratchet-identification/README.md).
->
-> **Three limitations survive, and one blocks freezing:**
->
-> 1. **§1 and §6 describe different hypotheses.** §1 words H-R timelessly —
->    "each episode steps the buffer permanently lower" — while §6, §7 and §8.1
->    all test a **late-onset** pattern. The single amendment permitted by §9
->    should re-scope §1 to late-onset ratcheting. **Do not freeze until this is
->    resolved**; the record must be unambiguous about which hypothesis was tested.
-> 2. **Blind below a 10% step.** "Against H-R" means "no ratchet ≥ 10%", not
->    refutation of shallower ratcheting. Must be stated in those words.
-> 3. **The detector fires on episode-free trending series** (~11 pseudo-episodes
->    per series, all false alarms). Report episode counts as a diagnostic. A
->    violent smooth late collapse also fakes the signature 40–79% of the time —
->    a genuine identification boundary to disclose.
+# Ratchet Pre-Specification v1.0 (FROZEN)
 
----
+> **FROZEN 2026-08-01, before any contact with real data.**
+> No edits after external timestamp; amendments require a new versioned
+> specification citing this one. The single revision permitted by §9 has been
+> spent on Amendment 1 in §1 and is recorded there.
 
-> **DRAFT. NOT FROZEN. NOT BINDING.**
-> Every parameter below is fixed *in this draft* before any real series has been
-> seen, but the draft awaits ratification. On ratification it is renamed
-> `ratchet-spec-v1.0.md`, committed with a freeze sentence, and registered
-> externally. Until then it binds nothing.
->
-> **The synthetic identification check ([`../results/ratchet-identification/`](../results/ratchet-identification/))
-> must be read before ratifying.** If that check shows the criterion cannot
-> separate ratcheting from ordinary secular decline, this specification is not
-> frozen and the ratchet question is not tested — the negative result is
-> published instead. That outcome is a legitimate finding, not a failure to be
-> worked around.
+**Status:** frozen. **Drafted** 2026-07-31, **amended and frozen** 2026-08-01.
+No real series has been fetched, opened, or inspected at any point.
 
-**Status:** written before any contact with real data. **Date drafted:**
-2026-07-31.
+## Validation record (§8.2 satisfied)
+
+The synthetic identification check required before freezing has been run.
+Full results: [`../results/ratchet-identification/`](../results/ratchet-identification/),
+seed `2026073101`, 2,000 series per world.
+
+**The criterion discriminates.** A late-onset ratchet is separated from a pure
+accelerating decline by **+78.0 points** (90.2% versus 12.2%), against the +20
+required. It is specific: **99.6%** "against H-R" in both mean-reversion worlds
+and 99.5% under linear decline. The constants below (1.5σ, 90%, 7 years) sit in
+a good region of the parameter grid; 13 of 27 cells clear +20.
+
+An earlier run of this check reported the opposite and recommended abandoning
+the study. That was an error in the simulation, not the criterion: it tested
+only constant-in-time ratchets, which §6 deliberately scores uninformative, and
+read the resulting near-zero detection as failure. It was caught by independent
+verification and is documented in the results README rather than removed.
+
+## Known limitations, binding on any result from this specification
+
+These are part of the frozen record. Any write-up reporting a result under this
+specification must carry them.
+
+1. **Blind below a 10% permanent step.** A genuine ratchet shallower than
+   `1 − REBUILD_FRACTION` leaves the series above the rebuild bar and scores
+   "rebuilt" everywhere; in simulation a 5% ratchet was read as evidence
+   *against* H-R **97.0%** of the time. **An "against H-R" verdict from this
+   specification means "no ratchet of 10% or more". It does not refute
+   shallower ratcheting**, and must not be reported as though it does.
+2. **Consistent ratchets are invisible.** Per Amendment 1, a domain that has
+   ratcheted in every era scores uninformative, by design.
+3. **The episode detector fires on episode-free trending series** — roughly 11
+   pseudo-episodes per series against 6 in episode-bearing worlds, all false
+   alarms. Per §8.3, **episode counts are reported as a diagnostic with every
+   result**, and an implausible count is reported as detector failure rather
+   than analysed.
+4. **A violent smooth late collapse fakes the signature** 40–79% of the time.
+   The criterion cannot distinguish "episodic permanent loss after the era
+   split" from "smooth collapse after the era split". This is an identification
+   boundary and is disclosed with any positive result.
+5. **Avoid σ = 1.0 with a 95% rebuild bar.** That cell destroys separation
+   (R 50.5% versus S-acc 66.0%). It is not the frozen setting and is recorded
+   so the avoidance is deliberate rather than lucky.
 
 **Why this document exists.** The correlated-drain index test has been withdrawn
 as not identified (see [`../results/withdrawal-note.md`](../results/withdrawal-note.md)).
@@ -57,15 +65,49 @@ seeing recovery trajectories is not a test.
 
 ## 1. The claim under test
 
-**H-R (ratchet):** following stress episodes, buffers systematically fail to
-rebuild to pre-episode levels. Depletion ratchets — each episode steps the buffer
-permanently lower.
+**H-R (late-onset ratchet):** buffers that formerly rebuilt after stress
+episodes have stopped doing so. Within a domain, episodes before the era split
+recover to pre-episode levels and episodes after it do not — the system's
+capacity to rebuild has degraded, and depletion now ratchets where it
+previously did not.
 
-**Null (mean reversion):** buffers recover after episodes, consistent with a
-system that draws down under stress and rebuilds afterwards.
+**Null (mean reversion):** buffers recover after episodes in both eras,
+consistent with a system that draws down under stress and rebuilds afterwards.
 
 The unit of analysis is **the episode**, not the year and not the domain. The
 question is what happens *after* a drawdown, not whether drawdowns happen.
+
+> **Amendment 1, 2026-08-01 — the single revision permitted by §9.**
+>
+> **Before:** *"following stress episodes, buffers systematically fail to
+> rebuild to pre-episode levels. Depletion ratchets — each episode steps the
+> buffer permanently lower."*
+>
+> **Why.** That wording is timeless: it claims every episode ratchets, in every
+> era. §6, §7 and §8.1 do not test it. They test a *change* in rebuild
+> behaviour — early-rebuilt versus late-not — and a consistently ratcheting
+> domain yields (0, 0) rebuild rates, which §6 deliberately scores
+> **uninformative** to avoid confusing ratcheting with secular decline. The
+> document therefore claimed one hypothesis and tested another. The synthetic
+> check surfaced this: a constant-in-time ratchet was scored uninformative or
+> mixed in 77% of runs at the deepest severity simulated.
+>
+> **Direction of effect: null-helping.** This narrows the claim. Timeless
+> ratcheting is the broader hypothesis; late-onset ratcheting is a strict
+> subset, and a domain that has ratcheted consistently since 1950 now scores
+> uninformative rather than supporting H-R. The amendment makes the claim
+> harder to support, not easier.
+>
+> **The alternative was worse.** Re-scoping §6 to detect timeless ratcheting
+> would mean abandoning the early-versus-late comparison, which is the only
+> control standing between this study and the confound that killed the index
+> test. Given a choice between a narrower claim and a weaker control, the
+> narrower claim is correct.
+>
+> **What is given up, stated plainly.** A domain that has been ratcheting
+> steadily for seventy years is invisible to this test. That is a real
+> limitation of what H-R can now claim, not a technicality, and it must be
+> carried into any write-up.
 
 ## 2. Knowledge-state disclosure
 
@@ -199,9 +241,13 @@ Fixed now, before any data contact.
 1. **If late-era episodes predominantly rebuild, H-R is wrong** and will be
    stated as wrong, in those words, in the results write-up and anywhere the
    ratchet claim has been made.
-2. **If the synthetic identification check cannot separate World R from World S**
-   (see the banner above), this specification is **not frozen**, H-R is **not
-   tested**, and the negative methodological result is published instead.
+2. **If the synthetic identification check cannot separate World R from World S**,
+   this specification is **not frozen**, H-R is **not tested**, and the negative
+   methodological result is published instead. **SATISFIED before freezing** —
+   see the validation record above: separation +78.0 points against a +20
+   requirement. This commitment was live, not decorative: an earlier run of the
+   check returned a negative verdict and the study was, for several hours, going
+   to be abandoned under this clause.
 3. **If the episode detector produces implausible results** — near-zero episodes,
    or episodes in nearly every year — that is reported as a detector failure.
    The threshold is not retuned to produce a workable count, because a threshold
@@ -220,7 +266,15 @@ contact, in response to the synthetic check only. Any amendment is recorded in
 this file with its rationale and its direction of effect. After freezing, no
 amendment: a new versioned specification citing this one would be required.
 
+**SPENT.** Amendment 1 (§1, 2026-08-01) re-scoped H-R from timeless to
+late-onset ratcheting, in response to the synthetic check, before any data
+contact. Rationale and direction of effect (null-helping) are recorded with it.
+**No further amendment is available under this specification.** The constants
+1.5σ, 90% and 7 years are unchanged from the draft and were not retuned; the
+grid showing where they fail is published rather than used to select them.
+
 ---
 
-**Version: v1.0-DRAFT · Drafted 2026-07-31 · NOT FROZEN**
-On ratification: rename, add the freeze sentence, register externally.
+**Version: v1.0 · FROZEN 2026-08-01 · Drafted 2026-07-31**
+No edits after external timestamp; amendments require a new versioned
+specification citing this one.

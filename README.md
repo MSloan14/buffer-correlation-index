@@ -20,7 +20,7 @@ easiest way to misread this repository.
 | | Component | Status |
 |---|---|---|
 | **Study 1** | Descriptive chartbook — are buffers thin, thinning, and thinning faster? | **Exploratory**, and labelled as such throughout |
-| **Study 2** | The ratchet question — after stress episodes, do buffers rebuild or step permanently lower? | Criterion **passed** its identification check. Not yet frozen — one amendment required |
+| **Study 2** | The ratchet question — have buffers that once rebuilt after stress episodes stopped doing so? | **Criterion frozen 2026-08-01**, validated before freezing, before any data contact |
 | **Study 3** | The frozen prediction slate | **Public, binding, timestamped** |
 
 And one component that has been removed:
@@ -58,27 +58,37 @@ The commitment it honours, quoted verbatim from Index Spec v0.2 §0:
 evidence about the instrument, generated before the gate opened. No result,
 favourable or otherwise, informed it.
 
-## Study 2 passed its identification check, and is not yet frozen
+## Study 2 — the ratchet question, frozen 2026-08-01
 
 The ratchet question survived the index withdrawal because it does not depend on
-cross-domain covariance. A criterion was drafted and — before freezing — tested
-against synthetic worlds, on the principle that the index test's failure was one
-of identification and the replacement should be checked for the same disease.
+cross-domain covariance. The criterion in
+[`prereg/ratchet-spec-v1.0.md`](prereg/ratchet-spec-v1.0.md) was drafted and
+then — before freezing — tested against synthetic worlds, on the principle that
+the index test's failure was one of identification and the replacement should be
+checked for the same disease before it was trusted.
 
 **It discriminates.** A late-onset ratchet is separated from a pure accelerating
 decline by **+78.0 points** (90.2% versus 12.2%), against a +20 requirement. It
-is also specific: 99.6% "against H-R" in both mean-reversion worlds. If buffers
-genuinely rebuild, this criterion says so.
+is also specific: **99.6%** "against H-R" in both mean-reversion worlds. If
+buffers genuinely rebuild, this criterion says so.
 
-Three limitations survive, and one blocks freezing: **§1 and §6 of the draft
-describe different hypotheses** — §1 words the claim timelessly while the
-machinery tests a late-onset pattern. The single permitted amendment should
-resolve that before anything is frozen. The criterion is also blind to ratchets
-shallower than 10%, so an "against" verdict means "no ratchet ≥ 10%" rather than
-refutation.
+**The claim it tests was narrowed before freezing.** The draft worded the
+hypothesis timelessly — every episode ratchets, in every era — while its own
+machinery tested a *change* in rebuild behaviour. The single permitted amendment
+re-scoped the claim to match the test: **buffers that formerly rebuilt have
+stopped doing so.** That is a strictly narrower hypothesis and a harder one to
+support; a domain that has ratcheted steadily since 1950 is now invisible to the
+test. The amendment is recorded in §1 of the frozen spec with its direction of
+effect.
 
-Full results, including a correction notice for an earlier version of this check
-that reached the opposite conclusion:
+Three limitations are frozen into the specification and bind any result: the
+criterion is **blind to ratchets shallower than 10%** — so an "against" verdict
+means "no ratchet ≥ 10%", not refutation — the episode detector fires on
+episode-free trending series, and a violent smooth late collapse can fake the
+signature.
+
+The validation, including a correction notice for an earlier run that reached
+the opposite conclusion and nearly ended the study:
 [`results/ratchet-identification/`](results/ratchet-identification/).
 
 ## Study 3 — the prediction slate — is unaffected
@@ -116,7 +126,7 @@ series page renders the current value and the full history.
 |---|---|
 | [`prereg/`](prereg/) | Frozen documents. Append-only: never edited, only superseded. |
 | [`results/withdrawal-note.md`](results/withdrawal-note.md) | Why the index test was withdrawn. |
-| [`results/ratchet-identification/`](results/ratchet-identification/) | Why Study 2's criterion was not frozen. |
+| [`results/ratchet-identification/`](results/ratchet-identification/) | The validation that let Study 2's criterion be frozen, and a correction notice for an earlier run that reached the opposite conclusion. |
 | [`results/power-simulation/`](results/power-simulation/) | What the withdrawn design could and could not detect. |
 | [`results/design-comparison/`](results/design-comparison/) | Six candidate designs compared. None rescued it. |
 | [`REVIEWER-NOTES.md`](REVIEWER-NOTES.md) | Known limitations, and an errata for a published finding that was wrong. Not part of the pre-registration. |
