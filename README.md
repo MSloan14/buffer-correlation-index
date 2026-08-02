@@ -164,16 +164,39 @@ source's terms.
 
 ## How to verify the timestamp
 
+**Registered 2026-08-01 18:53 UTC−5**, Open-Ended Registration, contributor
+Mica N Sloan.
+
+| | |
+|---|---|
+| **OSF registration** | https://osf.io/n6gep |
+| **Registration DOI** | 10.17605/OSF.IO/N6GEP |
+| **Parent project** (all seven documents, public, CC BY 4.0) | https://osf.io/xpz6m |
+| **Internet Archive snapshot** | https://archive.org/details/osf-registrations-n6gep-v1 |
+
+**The ratchet criterion was frozen and third-party timestamped before any real
+series was fetched.** The registration went live on 2026-08-01; the data gate
+opened afterwards. That ordering is the point, and it is checkable: the
+criterion in [`prereg/ratchet-spec-v1.0.md`](prereg/ratchet-spec-v1.0.md) is in
+the registration, and every file under `data/` postdates it.
+
+**Known issue with the OSF archive folder.** The registration's own archive
+folder is empty, due to a platform problem rather than anything about the
+documents. The seven constituent documents are available in three other places:
+the **parent project** linked above, this repository at tag
+[`prereg-v1`](https://github.com/MSloan14/buffer-correlation-index/releases/tag/prereg-v1),
+and the Internet Archive snapshot. Per-file SHA-256 hashes are in
+[`CHECKSUMS.sha256`](CHECKSUMS.sha256), so copies from any source can be checked
+against each other.
+
+Three ways to check the timestamp, weakest first:
+
 1. **Commit dates.** `git log --format='%H %ad %s' --date=iso`. Weakest form —
    commit dates come from the committer's machine and can be set to anything.
    **This proves nothing on its own.**
 2. **The GitHub release.** Tag `prereg-v1`, timestamped by a third party.
-3. **The OSF registration.** *(placeholder — URL and DOI to be inserted)*
-   **OSF registrations are immutable**, which makes this the strongest link:
+3. **The OSF registration.** Immutable, which makes it the strongest link:
    unlike a git history, the author cannot rewrite it.
-
-   > **OSF URL: _to be added_**
-   > **OSF DOI: _to be added_**
 
 To check the frozen documents are unaltered:
 
