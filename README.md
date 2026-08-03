@@ -130,7 +130,9 @@ series page renders the current value and the full history.
 | [`results/power-simulation/`](results/power-simulation/) | What the withdrawn design could and could not detect. |
 | [`results/design-comparison/`](results/design-comparison/) | Six candidate designs compared. None rescued it. |
 | [`REVIEWER-NOTES.md`](REVIEWER-NOTES.md) | Known limitations, and an errata for a published finding that was wrong. Not part of the pre-registration. |
-| [`docs/domain-6-options.md`](docs/domain-6-options.md) | Open decision on the health-capacity series. |
+| [`SUPPLEMENTARY.md`](SUPPLEMENTARY.md) | Everything outside the frozen core: descriptive companions, slate evidence logs, case-tracing candidates. **Post-freeze, descriptive only, excluded from Study 2 scoring.** |
+| [`results/watch/`](results/watch/) | Dated evidence logs for each slate prediction. Events, not arguments. |
+| [`docs/domain-6-options.md`](docs/domain-6-options.md) · [`domain-6-decision.md`](docs/domain-6-decision.md) | The health-capacity series choice, and why beds is primary. |
 | [`phase-4-precommitment.md`](phase-4-precommitment.md) | Results-blind branch language, drafted before any result existed. Explicitly not part of the pre-registration. |
 | [`DATA_TERMS.md`](DATA_TERMS.md) | What may be committed, per source. |
 | [`CHECKSUMS.sha256`](CHECKSUMS.sha256) | SHA-256 of everything in `prereg/`. |
