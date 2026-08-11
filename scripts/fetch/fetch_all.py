@@ -96,8 +96,12 @@ def main() -> int:
         print_plan()
         print("=" * 68)
         print("DRY RUN. No network access was performed.")
-        print("%d series planned, %d unverified identifiers, %d blockers."
-              % (len(REGISTRY), sum(1 for s in REGISTRY if not s.verified),
+        counts: dict[str, int] = {}
+        for s in REGISTRY:
+            counts[s.confidence] = counts.get(s.confidence, 0) + 1
+        print("%d series planned: %s. %d blocker(s)."
+              % (len(REGISTRY),
+                 ", ".join("%d %s" % (v, k) for k, v in sorted(counts.items())),
                  len(blockers)))
         if blockers:
             print("")

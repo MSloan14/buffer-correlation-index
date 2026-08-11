@@ -1,0 +1,21 @@
+OPENED BY: Mica N Sloan ON 2026-08-01
+
+Authorised in the post-OSF handoff: "OSF registration is live and frozen. The
+data gate opens now." Marker file created 2026-08-11 by Claude Code; the delay
+was blocked access to several sources, not a withheld authorisation.
+
+Preconditions satisfied before opening:
+
+  - Ratchet Pre-Specification v1.0 frozen 2026-08-01 and externally timestamped
+    at https://osf.io/n6gep, DOI 10.17605/OSF.IO/N6GEP, before any real series
+    was fetched.
+  - Index test withdrawn as not identified, on synthetic evidence only, with the
+    data never fetched.
+  - CHECKSUMS.sha256 records all five frozen documents and verifies clean.
+
+Disclosure. Data contact occurred before this marker existed, during access
+testing on 2026-08-02 and 2026-08-11: BLS union-density values for 2015-2024,
+BEA table metadata and coverage, and NASS commodity listings. This is recorded
+rather than omitted. It does not compromise the frozen criterion, which was
+registered and immutable before any of it, and Study 1 is exploratory by
+construction.

@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
-"""Registry of planned series. NOTHING HERE HAS BEEN FETCHED OR VERIFIED.
+"""Registry of planned series, rewritten 2026-08-11 against reachable routes.
 
-This file is written while the data gate is CLOSED. Every identifier below is a
-**candidate**, recorded from prior knowledge, and every one carries
-`verified=False`. None has been checked against its source.
+The 2026-08-01 registry routed six series through FRED. FRED has been
+unreachable from this machine since at least 2026-08-02 -- every
+`stlouisfed.org` subdomain times out, sandboxed and unsandboxed -- so those
+routes are gone. DATA_TERMS.md already preferred the issuing agency over an
+aggregator, so the replacements are closer to the rule than the originals were.
 
-## Why the identifiers are unverified
+## Confidence levels mean something here
 
-The task brief permitted verifying identifiers against "source documentation
-pages (titles, units, frequency, coverage)". For FRED that is not separable from
-data contact: a series page renders the current value and a chart of the entire
-history. Those are precisely the levels and trajectories the ratchet criterion
-would key on. Verifying by that route would have spent the blindness the gate
-exists to protect, so it was not done.
+    confirmed   The endpoint was queried and returned the expected series.
+                Title, units and coverage below were READ from the response,
+                not remembered.
+    reachable   The host answers, but this specific series has not been pulled.
+                Everything below it is an expectation to be tested.
+    unrouted    No working route is known. This is a gap, not a to-do.
+    manual      Cannot be scripted. Requires a human.
 
-## The failure mode this creates, stated plainly
+Only `confirmed` entries have had their metadata verified. Everything else is a
+claim awaiting `verify_registry()`.
 
-A wrong identifier does not error. It silently fetches a *different real series*
-with plausible units, and every downstream number is quietly about the wrong
-thing. `verify_registry()` in `fetch_all.py` therefore runs at gate-open and
-checks each fetched series against the `expect_*` fields below BEFORE any
-analysis. A series whose returned title, units, or frequency does not match its
-expectation is not used.
+## The failure mode this file exists to prevent
 
-Orientation follows Ratchet Spec section 3 and Index Spec v0.2 section 3.1:
-positive means higher = more buffer.
+A wrong identifier does not raise an error. It returns a different real series
+with plausible units, and every number downstream is quietly about the wrong
+thing. Two specific traps are recorded as `traps` below and are checked
+explicitly rather than left to a units comparison.
 """
 
 from __future__ import annotations
@@ -38,146 +39,224 @@ class PlannedSeries:
     key: str
     label: str
     source: str
-    identifier: str                  # CANDIDATE - unverified
-    url_template: str
+    route: str                       # how to get it
+    identifier: str
     expect_units: str
     expect_frequency: str
-    orientation: int                 # +1 higher = more buffer, -1 = invert
-    tier: str                        # DATA_TERMS.md tier
-    verified: bool = False
-    confidence: str = "low"          # low | medium - never high before checking
+    orientation: int                 # +1 higher = more buffer, -1 invert first
+    tier: str
+    confidence: str                  # confirmed | reachable | unrouted | manual
+    coverage: str = "unknown"
+    derived: bool = False            # a component of a ratio, not an analysis series
     notes: str = ""
+    traps: list[str] = field(default_factory=list)
     blockers: list[str] = field(default_factory=list)
 
 
-FRED_CSV = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={id}"
+BEA_API = "https://apps.bea.gov/api/data/"
+BLS_API = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
+EIA_BULK = "https://www.eia.gov/dnav/pet/hist_xls/{id}w.xls"
+TREASURY = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/"
+OECD_SDMX = "https://sdmx.oecd.org/public/rest/data/OECD.ELS.HD,{flow}/"
+NASS_API = "https://quickstats.nass.usda.gov/api/api_GET/"
 
 REGISTRY: list[PlannedSeries] = [
-    # --- Domain 1: strategic reserve -------------------------------------
+    # ---- Domain 1: strategic reserve -----------------------------------
     PlannedSeries(
         domain=1, key="spr_stocks", label="SPR crude oil stocks",
-        source="EIA", identifier="WCSSTUS1",
-        url_template=FRED_CSV,
-        expect_units="Thousands of Barrels", expect_frequency="Weekly",
-        orientation=+1, tier="Tier 1", confidence="medium",
-        notes="EIA weekly SPR stocks; FRED mirrors the EIA series. Native EIA "
-              "API is the preferred route per DATA_TERMS (issuing agency first).",
+        source="EIA", route=EIA_BULK, identifier="WCSSTUS1",
+        expect_units="Thousand Barrels", expect_frequency="Weekly",
+        orientation=+1, tier="Tier 1", confidence="reachable",
+        notes="Bulk xls endpoint answered with 129 KB on 2026-08-11. The series "
+              "itself has not been parsed. Enters the annual index as a "
+              "calendar-year mean per Index Spec v0.2 section 1.",
+        traps=["Must be SPR stocks specifically, NOT total US commercial crude "
+               "stocks. Both are weekly, both in thousand barrels, and a mixup "
+               "would pass any units check."],
     ),
     PlannedSeries(
         domain=1, key="refinery_inputs", label="Refiner net crude oil input",
-        source="EIA", identifier="WCRRIUS2",
-        url_template=FRED_CSV,
-        expect_units="Thousands of Barrels per Day", expect_frequency="Weekly",
-        orientation=+1, tier="Tier 1", confidence="low",
-        notes="Denominator only. The coverage ratio is stocks / trailing-12-month "
-              "mean daily inputs; it is DERIVED, not fetched.",
+        source="EIA", route=EIA_BULK, identifier="WCRRIUS2",
+        expect_units="Thousand Barrels per Day", expect_frequency="Weekly",
+        orientation=+1, tier="Tier 1", confidence="reachable", derived=True,
+        notes="Denominator only. The coverage ratio is SPR stocks divided by "
+              "trailing-12-month mean daily inputs, and is DERIVED here, not "
+              "fetched as a series.",
+        traps=["This is a denominator. It must never be charted or scored as a "
+               "buffer series in its own right."],
     ),
 
-    # --- Domain 2: financial ---------------------------------------------
+    # ---- Domain 2: financial -------------------------------------------
     PlannedSeries(
-        domain=2, key="credit_gap", label="BIS credit-to-GDP gap, US private non-financial",
-        source="BIS", identifier="BIS credit-gap statistics (bulk download)",
-        url_template="(BIS statistics portal - exact endpoint TBD at gate)",
+        domain=2, key="credit_gap",
+        label="BIS credit-to-GDP gap, US private non-financial",
+        source="BIS", route="https://data.bis.org/", identifier="(endpoint TBD)",
         expect_units="Percentage points of GDP", expect_frequency="Quarterly",
-        orientation=-1, tier="Tier 2", confidence="low",
-        notes="Spec v0.2 section 3.1: PUBLISHED VALUES ONLY, not re-derived. "
-              "Do not recompute the one-sided HP filter.",
-        blockers=["BIS terms of use must be verified before any file is "
-                  "committed (DATA_TERMS Tier 2). Until verified, treat Tier 3."],
+        orientation=-1, tier="Tier 2", confidence="reachable",
+        notes="bis.org answers. The specific download path has not been "
+              "established. Spec v0.2 section 3.1: PUBLISHED VALUES ONLY. Do "
+              "not recompute the one-sided HP filter.",
+        blockers=["Tier 2 terms of use must be verified before any BIS file is "
+                  "committed. Until verified, handle as Tier 3."],
     ),
 
-    # --- Domain 3: fiscal -------------------------------------------------
+    # ---- Domain 3: fiscal ----------------------------------------------
     PlannedSeries(
-        domain=3, key="debt_held_public_gdp", label="Federal debt held by the public, % of GDP",
-        source="OMB / CBO (FRED mirror permitted by spec)", identifier="FYPUGDA188S",
-        url_template=FRED_CSV,
-        expect_units="Percent of GDP", expect_frequency="Annual",
-        orientation=-1, tier="Tier 1", confidence="low",
-        notes="CAUTION: must be debt held by the PUBLIC, not total public debt. "
-              "Total-debt series (e.g. GFDEGDQ188S) is a DIFFERENT and wrong "
-              "quantity here and would pass a units check unnoticed.",
+        domain=3, key="debt_held_public", label="Federal debt held by the public",
+        source="Treasury FiscalData", route=TREASURY,
+        identifier="v2/accounting/od/debt_to_penny",
+        expect_units="US Dollars", expect_frequency="Daily",
+        orientation=-1, tier="Tier 1", confidence="reachable", derived=True,
+        notes="API answered on 2026-08-11. Level only; the spec quantity is a "
+              "share of GDP, so this is a numerator requiring a BEA GDP "
+              "denominator.",
+        traps=["THE RECORDED TRAP. The required quantity is debt held by THE "
+               "PUBLIC, not TOTAL public debt (which includes intragovernmental "
+               "holdings and is roughly a quarter larger). Both are dollar "
+               "series named almost identically. verify_registry must assert on "
+               "the field name, not the units."],
+    ),
+    PlannedSeries(
+        domain=3, key="gdp", label="Gross domestic product",
+        source="BEA", route=BEA_API, identifier="NIPA/T10105",
+        expect_units="Millions of dollars", expect_frequency="Annual",
+        orientation=+1, tier="Tier 1", confidence="reachable", derived=True,
+        notes="Denominator for debt/GDP. Table not yet confirmed.",
+        traps=["Denominator only. Never charted or scored as a buffer."],
     ),
     PlannedSeries(
         domain=3, key="net_interest", label="Federal net interest outlays",
-        source="OMB Historical Tables / CBO", identifier="FYOINT",
-        url_template=FRED_CSV,
-        expect_units="Millions of Dollars", expect_frequency="Annual",
-        orientation=-1, tier="Tier 1", confidence="low",
-        notes="Numerator only; the spec quantity is net interest as % of federal "
-              "RECEIPTS, so it is derived against the receipts series below.",
+        source="OMB Historical Tables / CBO", route="(none)",
+        identifier="(unrouted)",
+        expect_units="Millions of dollars", expect_frequency="Annual (FY)",
+        orientation=-1, tier="Tier 1", confidence="unrouted", derived=True,
+        notes="Was FRED-routed (FYOINT). FRED is unreachable. OMB Historical "
+              "Tables on whitehouse.gov are untested; CBO is untested.",
+        blockers=["NO WORKING ROUTE. Domain 3 sub-series 3a cannot be built "
+                  "until one is found. This is a gap to report, not to "
+                  "substitute around."],
     ),
     PlannedSeries(
-        domain=3, key="federal_receipts", label="Federal current receipts",
-        source="OMB / BEA", identifier="FYFR",
-        url_template=FRED_CSV,
-        expect_units="Millions of Dollars", expect_frequency="Annual",
-        orientation=+1, tier="Tier 1", confidence="low",
-        notes="Denominator only. Fiscal-year alignment per Index Spec v0.2 "
-              "section 1: FY t maps to calendar year t.",
+        domain=3, key="federal_receipts", label="Federal receipts",
+        source="OMB / BEA", route="(none)", identifier="(unrouted)",
+        expect_units="Millions of dollars", expect_frequency="Annual (FY)",
+        orientation=+1, tier="Tier 1", confidence="unrouted", derived=True,
+        notes="Denominator for net-interest share. Same blocker as above. BEA "
+              "NIPA may carry a current-receipts series, but federal FY "
+              "receipts as OMB reports them is the spec quantity.",
+        blockers=["NO WORKING ROUTE."],
     ),
 
-    # --- Domain 4: corporate ---------------------------------------------
+    # ---- Domain 4: corporate -------------------------------------------
     PlannedSeries(
-        domain=4, key="corp_net_debt_ebitda", label="US nonfinancial net debt / EBITDA",
-        source="IMF GFSR; S&P / rating-agency summaries", identifier="(transcribed)",
-        url_template="(none - transcription only)",
+        domain=4, key="corp_leverage", label="US nonfinancial net debt / EBITDA",
+        source="IMF GFSR; S&P summaries", route="(transcription)",
+        identifier="(manual)",
         expect_units="Ratio", expect_frequency="Annual (sparse)",
-        orientation=-1, tier="Tier 3", confidence="low",
-        notes="TIER 3. Transcribed numeric values with citation ONLY. Never the "
-              "GFSR PDF, its tables, or any bulk extract. Spec v0.2 carries a "
-              "mechanical substitution rule to BIS NFC credit-to-GDP if coverage "
-              "falls below 60% of any block's usable years.",
-        blockers=["Requires manual transcription; cannot be scripted."],
+        orientation=-1, tier="Tier 3", confidence="manual",
+        notes="TIER 3. Transcribed values with citation only -- never the GFSR "
+              "PDF, its tables, or any bulk extract. Spec v0.2 carries a "
+              "mechanical substitution to BIS NFC credit-to-GDP if coverage "
+              "falls below 60 percent of any block's usable years.",
+        blockers=["Cannot be scripted. Requires manual transcription."],
     ),
 
-    # --- Domain 5: household ----------------------------------------------
+    # ---- Domain 5: household -------------------------------------------
     PlannedSeries(
         domain=5, key="saving_rate", label="Personal saving rate",
-        source="BEA NIPA", identifier="PSAVERT",
-        url_template=FRED_CSV,
-        expect_units="Percent", expect_frequency="Monthly",
-        orientation=+1, tier="Tier 1", confidence="medium",
-        notes="Enters the annual index as the calendar-year mean of monthly values.",
+        source="BEA NIPA", route=BEA_API, identifier="NIPA/T20100/line35/A072RC",
+        expect_units="Percent", expect_frequency="Annual",
+        orientation=+1, tier="Tier 1", confidence="confirmed",
+        coverage="1929-2025 (97 annual observations)",
+        notes="CONFIRMED 2026-08-11. Line description read from the API: "
+              "'Personal saving as a percentage of disposable personal income', "
+              "which matches Index Spec v0.2 section 3.1 word for word. Longer "
+              "history than the FRED route would have provided.",
     ),
 
-    # --- Domain 6: health capacity ---------------------------------------
-    #  DELIBERATELY UNRESOLVED. See docs/domain-6-options.md. The author decides.
+    # ---- Domain 6: health capacity -------------------------------------
     PlannedSeries(
-        domain=6, key="health_capacity", label="(UNRESOLVED - see domain-6 options memo)",
-        source="(pending author decision)", identifier="(pending)",
-        url_template="(pending)",
-        expect_units="(pending)", expect_frequency="Annual",
-        orientation=+1, tier="(pending)", confidence="low",
-        notes="AHA Hospital Statistics is Tier 3 and cannot be redistributed. "
-              "Beds per 1,000 measures physical plant; the binding constraint is "
-              "staffed capacity. Options memo prepared; NOT decided here.",
-        blockers=["Author must choose the substitution. Do not decide "
-                  "unilaterally. See docs/domain-6-options.md."],
+        domain=6, key="hospital_beds", label="Hospital beds per 1,000 population",
+        source="OECD Health Statistics", route=OECD_SDMX,
+        identifier="DSD_HEALTH_REAC_HOSP@DF_BEDS_FUNC",
+        expect_units="Per 1 000 inhabitants", expect_frequency="Annual",
+        orientation=+1, tier="Tier 1", confidence="reachable",
+        notes="PRIMARY for domain 6 per docs/domain-6-decision.md. Dataflow "
+              "identified 2026-08-11; the keyed query form returned 422 and the "
+              "unkeyed form returns ~319k rows, so the filter syntax still needs "
+              "settling. AHA was set aside for licence reasons (Tier 3), not "
+              "because of its numbers.",
+        traps=["Must be TOTAL hospital beds, not curative-only or ICU-only. "
+               "DF_BEDS_FUNC carries several bed types under the same units."],
     ),
 
-    # --- Domain 7: social / associational ---------------------------------
+    # ---- Domain 7: social / associational -------------------------------
     PlannedSeries(
         domain=7, key="union_density", label="Union membership rate",
-        source="BLS Union Members release", identifier="LUU0204899600",
-        url_template=FRED_CSV,
+        source="BLS", route=BLS_API, identifier="LUU0204899600",
         expect_units="Percent", expect_frequency="Annual",
-        orientation=+1, tier="Tier 1", confidence="low",
-        notes="CPS-based, consistent from 1983. Spec v0.2 notes this is a "
-              "data-quality-over-construct-validity choice; union density is an "
-              "organised-associational-capacity proxy, not social connection.",
+        orientation=+1, tier="Tier 1", confidence="confirmed",
+        coverage="verified 2005-2024; full span to be pulled",
+        notes="CONFIRMED 2026-08-11. Returned 9.9 for 2024 and 10.0 for 2023, "
+              "consistent with the published union membership rate. Was blocked "
+              "by a 403 on 2026-08-02; api.bls.gov began answering by "
+              "2026-08-11. The registration key lifts the span cap from 10 to "
+              "20 years per query.",
     ),
 
-    # --- Domain 8: food ----------------------------------------------------
+    # ---- Domain 8: food -------------------------------------------------
     PlannedSeries(
-        domain=8, key="grain_stocks_use", label="US grain stocks-to-use (corn, wheat, soybeans)",
-        source="USDA WASDE / NASS", identifier="(WASDE tables; endpoint TBD)",
-        url_template="(USDA - exact endpoint TBD at gate)",
-        expect_units="Ratio", expect_frequency="Annual (marketing year)",
-        orientation=+1, tier="Tier 1", confidence="low",
-        notes="Unweighted mean of ending-stocks/total-use for the three crops. "
-              "Marketing years map to the year in which they BEGIN "
-              "(harvest-year convention, Index Spec v0.2 section 3.1) - a "
-              "disclosed deviation from the fiscal-year majority rule.",
+        domain=8, key="grain_stocks_use",
+        label="US grain stocks-to-use (corn, wheat, soybeans)",
+        source="USDA NASS QuickStats", route=NASS_API, identifier="(query TBD)",
+        expect_units="Ratio (derived)", expect_frequency="Annual (marketing year)",
+        orientation=+1, tier="Tier 1", confidence="reachable",
+        notes="Key validated 2026-08-11; CORN, WHEAT and SOYBEANS all present in "
+              "the commodity list. The USDA FAS route used on 2026-08-02 stopped "
+              "answering by 2026-08-11, which is why NASS moved from optional to "
+              "required. Marketing years map to the year in which they BEGIN "
+              "(harvest-year convention, Index Spec v0.2 section 3.1).",
+        traps=["Stocks-to-use is DERIVED: ending stocks divided by total use, "
+               "per crop, then an unweighted mean of the three ratios. Do not "
+               "fetch a published 'stocks to use' figure and assume it matches "
+               "the frozen construction."],
+    ),
+]
+
+# Supplementary tier. Post-freeze, descriptive only, excluded from Study 2.
+# See SUPPLEMENTARY.md.
+SUPPLEMENTARY: list[PlannedSeries] = [
+    PlannedSeries(
+        domain=0, key="student_teacher", label="NCES student-teacher ratios",
+        source="NCES Digest", route="https://nces.ed.gov/programs/digest/",
+        identifier="(table TBD)", expect_units="Ratio",
+        expect_frequency="Annual", orientation=-1, tier="Tier 1",
+        confidence="reachable",
+        notes="SUPPLEMENTARY. Inverted: a lower ratio means more capacity. "
+              "Confound to state on the chart -- a falling ratio can mean more "
+              "teachers or fewer students.",
+    ),
+    PlannedSeries(
+        domain=0, key="nurses_per_capita",
+        label="BLS OES registered nurses per capita",
+        source="BLS OES", route=BLS_API, identifier="(OES series TBD)",
+        expect_units="Employment per 1,000", expect_frequency="Annual",
+        orientation=+1, tier="Tier 1", confidence="reachable",
+        notes="SUPPLEMENTARY, domain-6 staffing companion. NEVER enters Study 2. "
+              "Confound to state on the chart -- nurse hiring tracks demand, so "
+              "it can rise exactly when a buffer measure should show strain.",
+    ),
+    PlannedSeries(
+        domain=0, key="nerc_reserve_margin",
+        label="NERC regional reserve margins",
+        source="NERC LTRA", route="https://www.nerc.com/pa/RAPA/ra/",
+        identifier="(per-region, TBD)", expect_units="Percent",
+        expect_frequency="Annual", orientation=+1, tier="Tier 1",
+        confidence="reachable",
+        notes="SUPPLEMENTARY. PER-REGION ONLY, no national splice -- spec v0.2 "
+              "section 3.2 rejected a national grid series because the "
+              "regional-entity map was reorganised repeatedly. Annotate the "
+              "methodology breaks on-chart.",
     ),
 ]
 
@@ -189,19 +268,38 @@ def by_domain() -> dict[int, list[PlannedSeries]]:
     return out
 
 
+def by_confidence() -> dict[str, list[PlannedSeries]]:
+    out: dict[str, list[PlannedSeries]] = {}
+    for s in REGISTRY:
+        out.setdefault(s.confidence, []).append(s)
+    return out
+
+
 def all_blockers() -> list[tuple[str, str]]:
     return [(s.key, b) for s in REGISTRY for b in s.blockers]
 
 
+def all_traps() -> list[tuple[str, str]]:
+    return [(s.key, t) for s in REGISTRY for t in s.traps]
+
+
 if __name__ == "__main__":
-    print("Planned series registry - NOTHING FETCHED, NOTHING VERIFIED")
+    print("Series registry - rewritten 2026-08-11")
     print("")
-    for domain, items in sorted(by_domain().items()):
-        print("Domain %d" % domain)
+    order = ["confirmed", "reachable", "unrouted", "manual"]
+    groups = by_confidence()
+    for level in order:
+        items = groups.get(level, [])
+        print("%s (%d)" % (level.upper(), len(items)))
         for s in items:
-            print("  %-22s %-34s id=%-22s conf=%s verified=%s"
-                  % (s.key, s.label[:34], s.identifier[:22], s.confidence,
-                     s.verified))
+            flag = " [derived]" if s.derived else ""
+            print("  d%d %-20s %-42s %s%s"
+                  % (s.domain, s.key, s.label[:42], s.source, flag))
+        print("")
+    print("TRAPS (%d) - checked explicitly, not left to a units comparison:"
+          % len(all_traps()))
+    for key, t in all_traps():
+        print("  [%s] %s" % (key, t))
     print("")
     print("BLOCKERS (%d):" % len(all_blockers()))
     for key, b in all_blockers():
