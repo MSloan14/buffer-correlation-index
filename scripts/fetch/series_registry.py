@@ -59,6 +59,7 @@ EIA_BULK = "https://www.eia.gov/dnav/pet/hist_xls/{id}w.xls"
 TREASURY = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/"
 OECD_SDMX = "https://sdmx.oecd.org/public/rest/data/OECD.ELS.HD,{flow}/"
 NASS_API = "https://quickstats.nass.usda.gov/api/api_GET/"
+OMB_XLSX = "https://www.whitehouse.gov/wp-content/uploads/2026/04/{table}_fy2027.xlsx"
 
 REGISTRY: list[PlannedSeries] = [
     # ---- Domain 1: strategic reserve -----------------------------------
@@ -126,25 +127,41 @@ REGISTRY: list[PlannedSeries] = [
     ),
     PlannedSeries(
         domain=3, key="net_interest", label="Federal net interest outlays",
-        source="OMB Historical Tables / CBO", route="(none)",
-        identifier="(unrouted)",
+        source="OMB Historical Tables", route=OMB_XLSX,
+        identifier="hist03z1 / Table 3.1 / row 21",
         expect_units="Millions of dollars", expect_frequency="Annual (FY)",
-        orientation=-1, tier="Tier 1", confidence="unrouted", derived=True,
-        notes="Was FRED-routed (FYOINT). FRED is unreachable. OMB Historical "
-              "Tables on whitehouse.gov are untested; CBO is untested.",
-        blockers=["NO WORKING ROUTE. Domain 3 sub-series 3a cannot be built "
-                  "until one is found. This is a gap to report, not to "
-                  "substitute around."],
+        orientation=-1, tier="Tier 1", confidence="confirmed", derived=True,
+        coverage="93 annual observations (1940 onward, incl. projections)",
+        notes="CONFIRMED 2026-08-11, replacing the dead FRED route (FYOINT). "
+              "OMB Table 3.1, outlays by superfunction and function. Row 21 "
+              "read as 899 (first) to 1,363,769 (last), in millions of dollars. "
+              "Projection years must be trimmed at fetch: the file is the FY2027 "
+              "budget edition and extends past the last actual year.",
+        traps=["SEVERE. Table 3.1 contains THREE rows labelled 'Net interest', "
+               "distinguished only by a heading several rows above: row 21 in "
+               "millions of dollars, row 41 as a percentage of OUTLAYS, row 51 "
+               "as a percentage of GDP. The spec quantity is net interest as a "
+               "share of RECEIPTS. Row 41 is already a percentage and would look "
+               "correct while carrying an entirely different denominator. Assert "
+               "on the section heading, never on the row label alone."],
     ),
     PlannedSeries(
-        domain=3, key="federal_receipts", label="Federal receipts",
-        source="OMB / BEA", route="(none)", identifier="(unrouted)",
+        domain=3, key="federal_receipts", label="Federal receipts, total",
+        source="OMB Historical Tables", route=OMB_XLSX,
+        identifier="hist01z1 / Table 1.1 / column 'Total Receipts'",
         expect_units="Millions of dollars", expect_frequency="Annual (FY)",
-        orientation=+1, tier="Tier 1", confidence="unrouted", derived=True,
-        notes="Denominator for net-interest share. Same blocker as above. BEA "
-              "NIPA may carry a current-receipts series, but federal FY "
-              "receipts as OMB reports them is the spec quantity.",
-        blockers=["NO WORKING ROUTE."],
+        orientation=+1, tier="Tier 1", confidence="confirmed", derived=True,
+        coverage="single years from 1901; aggregate rows before that",
+        notes="CONFIRMED 2026-08-11. Denominator for the net-interest share. "
+              "Two-level header: row 2 spans Total / On-Budget / Off-Budget, "
+              "row 3 names Receipts / Outlays / Surplus within each. The spec "
+              "quantity is TOTAL receipts, the first numeric column.",
+        traps=["The first two data rows are MULTI-YEAR AGGREGATES ('1789-1849', "
+               "'1850-1900'), not years. Parsing them as years would inject two "
+               "fabricated observations at the start of the series.",
+               "On-Budget receipts appear in a later column with the same label "
+               "'Receipts'. Total is the spec quantity; On-Budget excludes "
+               "Social Security and is materially smaller."],
     ),
 
     # ---- Domain 4: corporate -------------------------------------------
