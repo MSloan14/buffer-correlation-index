@@ -59,6 +59,8 @@ EIA_BULK = "https://www.eia.gov/dnav/pet/hist_xls/{id}w.xls"
 TREASURY = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/"
 OECD_SDMX = "https://sdmx.oecd.org/public/rest/data/OECD.ELS.HD,{flow}/"
 NASS_API = "https://quickstats.nass.usda.gov/api/api_GET/"
+BIS_SDMX = "https://stats.bis.org/api/v2/data/dataflow/BIS/{flow}/1.0/{key}?format=csv"
+ERS_FILE = "https://www.ers.usda.gov/(see identifier)"
 OMB_XLSX = "https://www.whitehouse.gov/wp-content/uploads/2026/04/{table}_fy2027.xlsx"
 
 REGISTRY: list[PlannedSeries] = [
@@ -68,15 +70,25 @@ REGISTRY: list[PlannedSeries] = [
         source="EIA", route=EIA_BULK, identifier="WCSSTUS1",
         expect_units="Thousand Barrels", expect_frequency="Weekly",
         orientation=+1, tier="Tier 1", confidence="reachable",
-        notes="Bulk xls endpoint answered with 129 KB on 2026-08-11. The series "
-              "itself has not been parsed. Enters the annual index as a "
-              "calendar-year mean per Index Spec v0.2 section 1.",
+        notes="SETTLED 2026-08-20. WCSSTUS1 is 'Weekly U.S. Ending Stocks of "
+              "Crude Oil in SPR', thousand barrels, 1982-08-20 to current. "
+              "Enters the annual index as a calendar-year mean per Index Spec "
+              "v0.2 section 1. Spec says million bbl and the source publishes "
+              "THOUSAND - convert at build, do not relabel the source.",
         traps=["Must be SPR stocks specifically, NOT total US commercial crude "
                "stocks. Both are weekly, both in thousand barrels, and a mixup "
                "would pass any units check.",
                "Coverage must reach the SPR's own history (fill began in the "
                "late 1970s). A route starting in 2000 leaves Study 2 without "
-               "early episodes for this domain."],
+               "early episodes for this domain.",
+               "THE REGISTRY'S OWN ROUTE TRIPPED THIS TRAP. The weekly series "
+               "starts 1982-08-20, which is AFTER the fill began, so the trap "
+               "above was written against a route that could not satisfy it. "
+               "The monthly MER counterpart MCSSTUS1 reaches January 1977 and "
+               "covers the full history. Decide weekly-vs-monthly on how much "
+               "1977-1982 depth Study 2 needs, and record the choice; do not "
+               "silently accept the 1982 start as if it were the series' own "
+               "beginning."],
     ),
     PlannedSeries(
         domain=1, key="refinery_inputs", label="Refiner net crude oil input",
@@ -90,20 +102,37 @@ REGISTRY: list[PlannedSeries] = [
                "buffer series in its own right.",
                "Refiner NET crude input, GROSS inputs to refineries, and crude "
                "'product supplied' are three different weekly series in "
-               "thousand barrels per day. Net-vs-gross is an unsettled "
-               "judgement and must be recorded once resolved."],
+               "thousand barrels per day. RESOLVED 2026-08-20 in favour of "
+               "NET, and the reasoning is recorded because the spec never uses "
+               "the word: spec v0.2 section 3.1 says 'crude inputs to "
+               "refineries', which names a CRUDE-ONLY quantity. EIA's "
+               "crude-only input series is refiner NET input. 'Gross inputs' "
+               "(WGIRIUS2) measures total inputs to distillation units "
+               "INCLUDING unfinished oils, so it is not 'crude inputs', and "
+               "it starts only in Jan 1990. The chosen identifier was already "
+               "consistent with this; the judgement is now on the record "
+               "rather than implicit in a series code.",
+               "Monthly counterpart MCRRIUS2 reaches Jan 1961, should the "
+               "weekly 1982 start prove too short for the denominator."],
     ),
 
     # ---- Domain 2: financial -------------------------------------------
     PlannedSeries(
         domain=2, key="credit_gap",
         label="BIS credit-to-GDP gap, US private non-financial",
-        source="BIS", route="https://data.bis.org/", identifier="(endpoint TBD)",
+        source="BIS", route=BIS_SDMX, identifier="WS_CREDIT_GAP / Q.US.P.A.C",
         expect_units="Percentage points of GDP", expect_frequency="Quarterly",
-        orientation=-1, tier="Tier 2", confidence="reachable",
-        notes="bis.org answers. The specific download path has not been "
-              "established. Spec v0.2 section 3.1: PUBLISHED VALUES ONLY. Do "
-              "not recompute the one-sided HP filter.",
+        orientation=-1, tier="Tier 2", confidence="confirmed",
+        coverage="1957-Q4 to 2025-Q4, quarterly",
+        notes="SETTLED 2026-08-20. Dataflow BIS/WS_CREDIT_GAP/1.0, dimension "
+              "order FREQ.BORROWERS_CTY.TC_BORROWERS.TC_LENDERS.CG_DTYPE, key "
+              "Q.US.P.A.C - quarterly, United States, P = private "
+              "non-financial borrowers, A = all lending sectors, C = "
+              "credit-to-GDP gap (actual minus trend). Read live: 2025-Q4 = "
+              "-11.54, consistent with the well-known deeply negative US gap. "
+              "Spec v0.2 section 3.1: PUBLISHED VALUES ONLY. Do not recompute "
+              "the one-sided HP filter (lambda = 400,000); the .C code IS the "
+              "published gap, which is what makes that rule satisfiable.",
         traps=["Gap vs ratio vs trend. BIS publishes the credit-to-GDP RATIO, "
                "its estimated TREND, and the GAP between them. All three are in "
                "percent-of-GDP units. Only the GAP is the spec quantity.",
@@ -112,9 +141,19 @@ REGISTRY: list[PlannedSeries] = [
                "the same shape. The NFC series is domain 4's fallback, so a "
                "sector slip either duplicates domain 2 or corrupts both.",
                "Lender basis. Credit from ALL SECTORS and bank credit only are "
-               "different series in the same units."],
-        blockers=["Tier 2 terms of use must be verified before any BIS file is "
-                  "committed. Until verified, handle as Tier 3."],
+               "different series in the same units.",
+               "AN UNPINNED KEY SILENTLY RETURNS ALL THREE. For advanced "
+               "economies the flow serves ratio, trend AND gap under "
+               "constraint CTG_GAPS_ADV_ECON (CG_DTYPE A/B/C), interleaved in "
+               "one response. The key must end in .C. This is the gap-vs-ratio "
+               "trap above, but as a retrieval failure rather than a reading "
+               "one - it produces three times as many rows, not wrong units.",
+               "UNITS LABEL MISMATCH, and it will false-fail a correct series. "
+               "The SDMX response labels unit 770 = 'Percentage of GDP' even "
+               "for the gap, whereas a gap is semantically in percentage "
+               "POINTS of GDP. expect_units here keeps the correct semantics; "
+               "the verifier must therefore assert on the CG_DTYPE code, not "
+               "on the unit string."],
     ),
 
     # ---- Domain 3: fiscal ----------------------------------------------
@@ -268,7 +307,15 @@ REGISTRY: list[PlannedSeries] = [
                "non-financial. Taking the domain-2 series here silently "
                "duplicates domain 2."],
         blockers=["Do not fetch unless the coverage rule has actually fired, and "
-                  "record that it fired."],
+                  "record that it fired.",
+                  "BORROWER CODE NOT PINNED. Domain 2 settled on TC_BORROWERS "
+                  "= P (private non-financial). The nonfinancial-corporations "
+                  "code for the GAP flow was NOT established - BIS may publish "
+                  "gaps for the total private non-financial sector only, in "
+                  "which case this contingency needs the total-credit RATIO "
+                  "flow instead and is a different quantity from domain 2's. "
+                  "Settle that BEFORE the coverage rule can be allowed to "
+                  "fire, not after."],
     ),
 
     # ---- Domain 5: household -------------------------------------------
@@ -288,16 +335,40 @@ REGISTRY: list[PlannedSeries] = [
     PlannedSeries(
         domain=6, key="hospital_beds", label="Hospital beds per 1,000 population",
         source="OECD Health Statistics", route=OECD_SDMX,
-        identifier="DSD_HEALTH_REAC_HOSP@DF_BEDS_FUNC",
+        identifier="DSD_HEALTH_REAC_HOSP@DF_BEDS_FUNC / "
+                   "USA.HB.10P3HB._Z._Z._T._T._Z._Z",
         expect_units="Per 1 000 inhabitants", expect_frequency="Annual",
-        orientation=+1, tier="Tier 1", confidence="reachable",
-        notes="PRIMARY for domain 6 per docs/domain-6-decision.md. Dataflow "
-              "identified 2026-08-11; the keyed query form returned 422 and the "
-              "unkeyed form returns ~319k rows, so the filter syntax still needs "
-              "settling. AHA was set aside for licence reasons (Tier 3), not "
+        orientation=+1, tier="Tier 1", confidence="confirmed",
+        coverage="1960-2022; 1961-64 and 1966-69 missing; 2000-2022 complete",
+        notes="SETTLED 2026-08-20. PRIMARY for domain 6 per "
+              "docs/domain-6-decision.md. The 422 is explained: the key needs "
+              "exactly NINE positions (eight dots) - "
+              "REF_AREA.MEASURE.UNIT_MEASURE.STATISTICAL_OPERATION."
+              "OWNERSHIP_TYPE.HEALTH_FUNCTION.CARE_TYPE.MEDICAL_TECH."
+              "HEALTH_CARE_PROVIDER - and the earlier attempt supplied the "
+              "wrong count, which SDMX rejects rather than defaulting. Read "
+              "live: 2000 = 3.49, 2019 = 2.80, 2022 = 2.75, matching the known "
+              "US level. AHA was set aside for licence reasons (Tier 3), not "
               "because of its numbers.",
         traps=["Must be TOTAL hospital beds, not curative-only or ICU-only. "
-               "DF_BEDS_FUNC carries several bed types under the same units."],
+               "DF_BEDS_FUNC carries several bed types under the same units. "
+               "MEASURE=HB is total beds and ICU variants are separate MEASURE "
+               "codes; HEALTH_FUNCTION=_T is Total and HC1 is curative-only.",
+               "UNIT_MEASURE MUST BE PINNED. 10P3HB (per 1,000 inhabitants) "
+               "and BD (absolute bed counts) coexist under the same measure. "
+               "An unpinned unit dimension does not default to the rate."],
+        blockers=["COVERAGE CLIFF - a data reality, not an identifier problem, "
+                  "and potentially decisive for the headline. US beds data "
+                  "currently ENDS AT 2022. The crisis-excluded third block "
+                  "B3ex is {2018, 2019, 2022, 2023, 2024, 2025}, so beds cover "
+                  "3 of 6 years = 50 percent, BELOW spec v0.2 section 5's "
+                  "60-percent block-coverage rule. On today's data domain 6 "
+                  "falls out of the verdict-bearing B3 block entirely. If OECD "
+                  "publishes US 2023 before Phase 3 the figure becomes 4 of 6 "
+                  "= 66.7 percent and it stays in. No route change fixes this; "
+                  "watch it at every OECD health release, and if it does not "
+                  "resolve, report domain 6 as excluded by the coverage rule "
+                  "rather than quietly carrying three points."],
     ),
 
     # ---- Domain 7: social / associational -------------------------------
@@ -324,7 +395,10 @@ REGISTRY: list[PlannedSeries] = [
     PlannedSeries(
         domain=8, key="grain_stocks_use",
         label="US grain stocks-to-use (corn, wheat, soybeans)",
-        source="USDA NASS QuickStats", route=NASS_API, identifier="(query TBD)",
+        source="USDA ERS balance sheets (Feed Grains, Wheat Data, Oil Crops)",
+        route=ERS_FILE,
+        identifier="Feed Grains Yearbook (corn) / Wheat Data-All Years / "
+                   "Oil Crops Yearbook (soybeans)",
         expect_units="Ratio (derived)", expect_frequency="Annual (marketing year)",
         orientation=+1, tier="Tier 1", confidence="reachable",
         notes="Key validated 2026-08-11. Marketing years map to the year in which "
@@ -342,7 +416,23 @@ REGISTRY: list[PlannedSeries] = [
               "balance-sheet source; reachable 2026-08-20 are the ERS Feed Grains "
               "database, the WASDE archive at Cornell ESMIS, and USDA FAS PSD "
               "(which answered again after refusing connections on 2026-08-11). "
-              "None is settled yet.",
+              "RESOLVED 2026-08-20 to ERS, and BOTH halves of each ratio now "
+              "come from the SAME balance sheet. Mixing a NASS numerator with "
+              "an ERS denominator would pair two independently revised "
+              "vintages; ERS supply-and-disappearance tables carry ending "
+              "stocks and total use together, and are the WASDE-consistent "
+              "published estimates that NASS stocks feed into, so this still "
+              "satisfies the spec's 'WASDE/NASS published estimates' wording. "
+              "The WASDE ARCHIVE was rejected for a specific reason: each "
+              "WASDE carries only the current and prior marketing years, so "
+              "the archive serves VINTAGES, while the spec demands the latest "
+              "published estimate per marketing year - for MY 2000/01 that "
+              "lives in today's revised ERS sheet, not in any archived WASDE. "
+              "FAS PSD was rejected because it refuses without its own key "
+              "(API_KEY_MISSING confirmed live; .env has BEA/NASS/BLS only) "
+              "and its attribute set appears to carry Domestic Consumption and "
+              "Exports but no explicit total-use line, so summing would brush "
+              "against the no-construction rule.",
         traps=["Stocks-to-use is DERIVED: ending stocks divided by total use, "
                "per crop, then an unweighted mean of the three ratios. Do not "
                "fetch a published 'stocks to use' figure and assume it matches "
@@ -355,18 +445,30 @@ REGISTRY: list[PlannedSeries] = [
                "DOMESTIC use vs TOTAL use as the denominator. Total is the "
                "spec quantity.",
                "All wheat vs a single wheat class.",
-               "The DENOMINATOR may not exist in QuickStats: total use is a "
-               "WASDE/ERS balance-sheet item. If NASS does not carry it the "
-               "route is incomplete and that must be reported, not improvised.",
+               "The DENOMINATOR does not exist in QuickStats: total use is a "
+               "WASDE/ERS balance-sheet item. CONFIRMED by live query, twice "
+               "and independently. Kept as a trap because the numerator IS "
+               "there, so a future revision could reasonably reach for NASS "
+               "again and find half of what it needs.",
+               "ERS discontinued the Feed Grains custom-query application in "
+               "May 2025. Since January 2026 only the All Years Excel/CSV "
+               "files are posted, so the corn route is a FILE PARSE, not a "
+               "query API. A route written against the old query app fails.",
                "Latest published estimate per marketing year at retrieval, "
                "retrieval-date logged, NO vintage selection."],
-        blockers=["ROUTE INCOMPLETE. NASS supplies the numerator only - quarterly "
-                  "stocks by position - and carries no total-use series at all, "
-                  "confirmed by live query 2026-08-20. A balance-sheet source for "
-                  "the denominator (ERS Feed Grains, WASDE archive, or FAS PSD) "
-                  "must be settled before domain 8 can be built. Do not improvise "
-                  "a denominator and do not substitute a published stocks-to-use "
-                  "figure for the frozen three-crop construction."],
+        blockers=["Do not improvise a denominator and do not substitute a "
+                  "published stocks-to-use figure for the frozen three-crop "
+                  "construction. The route is now sourced but NOT yet read: "
+                  "only the corn documentation was confirmed to describe a "
+                  "total-disappearance line. Open the wheat and soybean "
+                  "workbooks at gate-open and assert an EXPLICIT total-use "
+                  "column in each before building anything.",
+                  "TAIL-YEAR VINTAGE DECISION, unresolved. The Oil Crops "
+                  "Yearbook revises annually in March, so the newest marketing "
+                  "year may exist only in current WASDE/PSD at retrieval. That "
+                  "is a vintage choice and the spec forbids vintage selection - "
+                  "so decide the rule in advance and record it, rather than "
+                  "picking whichever source happens to have the tail year."],
     ),
 ]
 

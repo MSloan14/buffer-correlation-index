@@ -40,10 +40,29 @@ that series regardless of where it was obtained.
 |---|---|---|
 | BIS (Bank for International Settlements) | Credit / banking | Permitted **with attribution** |
 
-BIS statistics are made available for use with attribution to the BIS. The
-precise wording and any restriction on commercial or bulk redistribution
-**must be verified against the BIS terms of use at Phase 3**, before any BIS
-file is committed. Until verified, treat as Tier 3.
+BIS statistics are made available for use with attribution to the BIS.
+
+**Verified 2026-08-20** against the BIS "Terms of permitted use of BIS
+statistics" at <https://www.bis.org/terms_statistics.htm>, which reads:
+
+> The use of the statistics is unrestricted, provided that: if the
+> statistics are reproduced, the BIS must be cited in your publication or
+> product as the source of the statistics; ... your use of the statistics
+> must not be potentially misleading, for example by implying endorsement
+> or affiliation with the BIS ...; if the statistics will be used in a
+> commercial publication or product, their inclusion in the publication or
+> product will not result in any additional charge to subscribers or other
+> users; ... No other use is permissible.
+
+Committing BIS credit-gap values to this public repository with attribution
+sits inside "unrestricted ... provided" plus the citation condition. The
+other operative conditions - no implied endorsement, no additional charge,
+no warranty, not investment advice - are met by a non-commercial research
+repository that cites the BIS as source.
+
+**The Tier 3 holding rule is therefore lifted for BIS.** Redistribution with
+attribution is permitted, and `data/raw/` may hold BIS files. This clears
+the blocker that stood on the domain-2 credit gap.
 
 ## Tier 3 — Proprietary: transcribed values only
 

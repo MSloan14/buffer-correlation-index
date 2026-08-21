@@ -25,6 +25,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import csv
 import io
 import json
 import sys
@@ -566,6 +567,166 @@ def verify_omb_debt(s: PlannedSeries, env: dict) -> Result:
     return r
 
 
+def _csv_rows(blob: bytes) -> list[dict]:
+    text = blob.decode("utf-8-sig", errors="replace")
+    return list(csv.DictReader(io.StringIO(text)))
+
+
+def verify_bis_gap(s: PlannedSeries, env: dict) -> Result:
+    """BIS credit-to-GDP GAP, US private non-financial, all lenders.
+
+    The discriminating assertion is NOT units. Ratio, trend and gap are all
+    served by this flow, all labelled percent-of-GDP. What separates them is
+    the CG_DTYPE code and the VALUE RANGE: the US credit-to-GDP ratio runs
+    around 150-250, the gap runs in single or low double digits either side of
+    zero. A run that silently returned the ratio would pass any units check.
+    """
+    r = Result(s.key, "PENDING")
+    url = ("https://stats.bis.org/api/v2/data/dataflow/BIS/WS_CREDIT_GAP/1.0/"
+           "Q.US.P.A.C?format=csv")
+    try:
+        rows = _csv_rows(http(url))
+    except Exception as e:
+        r.status = "UNRESOLVED"
+        r.error = str(e)[:200]
+        return r
+    if not rows:
+        r.status = "UNRESOLVED"
+        r.error = "empty CSV"
+        return r
+
+    def col(*names):
+        for n in names:
+            if n in rows[0]:
+                return n
+        return None
+
+    c_type = col("CG_DTYPE", "TC_DTYPE")
+    c_per = col("TIME_PERIOD")
+    c_val = col("OBS_VALUE")
+    c_bor = col("TC_BORROWERS")
+    c_len = col("TC_LENDERS")
+    r.observed = {"n": len(rows), "columns": list(rows[0])[:12]}
+
+    types = sorted({row.get(c_type, "") for row in rows}) if c_type else []
+    r.add("TRAP: exactly one series type returned, and it is the GAP",
+          types == ["C"], "CG_DTYPE values present: %s" % (types or "column absent"))
+    if c_bor:
+        bors = sorted({row[c_bor] for row in rows})
+        r.add("TRAP: borrower sector is P (private non-financial)",
+              bors == ["P"], "TC_BORROWERS: %s" % bors)
+    if c_len:
+        lens = sorted({row[c_len] for row in rows})
+        r.add("TRAP: lender basis is A (all sectors), not banks only",
+              lens == ["A"], "TC_LENDERS: %s" % lens)
+
+    pers = sorted(row[c_per] for row in rows if row.get(c_per))
+    r.add("quarterly periods", bool(pers) and all("-Q" in x for x in pers[:5]),
+          "%d periods, %s to %s" % (len(pers), pers[0] if pers else "-",
+                                    pers[-1] if pers else "-"))
+    need = REQUIRED_FIRST_YEAR.get(s.key)
+    if pers and need:
+        r.add("reaches back far enough for Study 2 (needs <= %s)" % need,
+              int(pers[0][:4]) <= need, "first period %s" % pers[0])
+
+    vals = []
+    for row in rows:
+        try:
+            vals.append(float(row[c_val]))
+        except (TypeError, ValueError):
+            pass
+    r.observed["last_value"] = vals[-1] if vals else None
+    # The load-bearing check. A gap straddles zero; a ratio does not.
+    r.add("TRAP: values are a GAP, not the credit-to-GDP RATIO",
+          bool(vals) and min(vals) < 0 < max(vals) and max(abs(v) for v in vals) < 60,
+          "range %.2f to %.2f - a ratio would sit near 150-250 and never "
+          "cross zero" % (min(vals), max(vals)) if vals else "no values parsed")
+    r.settle()
+    return r
+
+
+def verify_oecd_beds(s: PlannedSeries, env: dict) -> Result:
+    """OECD total hospital beds per 1,000, United States.
+
+    Also computes the spec section-5 block-coverage figure for B3ex, because
+    domain 6's admission to the verdict-bearing block turns on it and the
+    answer changes with each OECD release. Recording it as a live number
+    rather than a hand-worked one means it stops being wrong silently.
+    """
+    r = Result(s.key, "PENDING")
+    url = ("https://sdmx.oecd.org/public/rest/data/"
+           "OECD.ELS.HD,DSD_HEALTH_REAC_HOSP@DF_BEDS_FUNC,1.0/"
+           "USA.HB.10P3HB._Z._Z._T._T._Z._Z?format=csvfile")
+    try:
+        rows = _csv_rows(http(url))
+    except Exception as e:
+        r.status = "UNRESOLVED"
+        r.error = str(e)[:200]
+        return r
+    if not rows:
+        r.status = "UNRESOLVED"
+        r.error = "empty CSV - a 9-position key returning nothing usually "\
+                  "means a code changed, not that the US has no beds"
+        return r
+
+    hdr = list(rows[0])
+    r.observed = {"n": len(rows), "columns": hdr[:12]}
+
+    def uniq(name):
+        return sorted({row.get(name, "") for row in rows}) if name in hdr else None
+
+    for name, want, why in (
+            ("REF_AREA", ["USA"], "country is the US"),
+            ("MEASURE", ["HB"], "TRAP: measure is total hospital beds, not an ICU variant"),
+            ("UNIT_MEASURE", ["10P3HB"],
+             "TRAP: unit is per-1,000 inhabitants, not absolute bed counts"),
+            ("HEALTH_FUNCTION", ["_T"],
+             "TRAP: function is Total, not curative-only (HC1)")):
+        got = uniq(name)
+        if got is not None:
+            r.add(why, got == want, "%s = %s" % (name, got))
+
+    years, series = [], {}
+    for row in rows:
+        try:
+            y = int(str(row.get("TIME_PERIOD", ""))[:4])
+            v = float(row["OBS_VALUE"])
+        except (TypeError, ValueError):
+            continue
+        years.append(y)
+        series[y] = v
+    years.sort()
+    r.observed.update({"first": years[0] if years else None,
+                       "last": years[-1] if years else None})
+    r.add("annual observations parse", len(years) > 20,
+          "%d years, %s to %s" % (len(years), years[0] if years else "-",
+                                  years[-1] if years else "-"))
+    if series:
+        vals = list(series.values())
+        r.add("values are a per-1,000 rate, not a bed count",
+              all(0 < v < 30 for v in vals),
+              "min %.2f max %.2f" % (min(vals), max(vals)))
+    need = REQUIRED_FIRST_YEAR.get(s.key)
+    if years and need:
+        r.add("reaches back far enough for Study 2 (needs <= %s)" % need,
+              years[0] <= need, "first observation %d" % years[0])
+
+    # Spec v0.2 section 5: a domain must cover >= 60% of a block's usable years
+    # to enter that block. B3ex is the third block with crisis years removed.
+    B3EX = [2018, 2019, 2022, 2023, 2024, 2025]
+    have = [y for y in B3EX if y in series]
+    frac = len(have) / len(B3EX)
+    r.add("BLOCKING: covers at least 60 percent of B3ex, the verdict block",
+          frac >= 0.60,
+          "%d of %d years (%.0f%%) - have %s, missing %s. Below 60%% this "
+          "domain leaves B3 entirely; OECD publishing US 2023 would lift it "
+          "to 4 of 6 = 67%%."
+          % (len(have), len(B3EX), 100 * frac, have,
+             [y for y in B3EX if y not in series]))
+    r.settle()
+    return r
+
+
 def verify_generic_reachable(s: PlannedSeries, env: dict) -> Result:
     """Entries with a host but no settled endpoint.
 
@@ -615,6 +776,11 @@ VERIFIERS = {
     "debt_held_public": verify_omb_debt,
     "net_interest": verify_omb_table,
     "federal_receipts": verify_omb_table,
+    # Added 2026-08-20 once the SDMX keys were settled. These exist so the
+    # two routes rest on a live assertion here, not on the report that
+    # derived them.
+    "credit_gap": verify_bis_gap,
+    "hospital_beds": verify_oecd_beds,
 }
 
 
