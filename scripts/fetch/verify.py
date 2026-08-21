@@ -215,13 +215,34 @@ def verify_bls(s: PlannedSeries, env: dict) -> Result:
         r.add("values in a plausible percent range", plausible,
               "min=%.1f max=%.1f" % (min(vals), max(vals)))
     need = REQUIRED_FIRST_YEAR.get(s.key)
-    if data and need:
-        first = int(min(d["year"] for d in data))
-        # The probe window is 2005-2024, so this cannot confirm the true start.
-        # Report it as UNCHECKED rather than passing on a window we chose.
-        r.add("reaches back to %s" % need, None,
-              "NOT CHECKED - probe window starts %d; widen the query at fetch "
-              "and fail the series if it cannot reach %s" % (first, need))
+    if need:
+        # BLS v2 caps one query at 20 years, so the main probe window cannot
+        # see the start of the series. This was UNCHECKED until 2026-08-21.
+        # It is not a formality: spec v0.2 section 3.1 chose union density over
+        # GSS trust BECAUSE of the CPS-consistent span, and if the series did
+        # not reach 1983 the domain could not support Study 2 early-vs-late
+        # comparison at all. Ask for the required span directly.
+        probe = {"seriesid": [s.identifier], "startyear": str(need),
+                 "endyear": str(need + 19)}
+        if env.get("BLS_API_KEY"):
+            probe["registrationkey"] = env["BLS_API_KEY"]
+        try:
+            pr = json.loads(http(
+                "https://api.bls.gov/publicAPI/v2/timeseries/data/",
+                data=json.dumps(probe).encode(),
+                content_type="application/json"))
+            ok = (pr.get("status") == "REQUEST_SUCCEEDED"
+                  and pr["Results"].get("series"))
+            got = sorted(int(d["year"])
+                         for d in (pr["Results"]["series"][0].get("data", [])
+                                   if ok else []))
+            detail = ("%d observations, %s to %s, in the %s-%s probe"
+                      % (len(got), got[0], got[-1], need, need + 19)
+                      if got else "probe returned nothing")
+        except Exception as e:
+            got, detail = [], "reach probe failed: %s" % str(e)[:120]
+        r.add("reaches back to %s (the CPS-consistent span the spec cites)"
+              % need, bool(got) and got[0] <= need, detail)
     r.settle()
     return r
 
@@ -321,6 +342,39 @@ def verify_omb_table(s: PlannedSeries, env: dict) -> Result:
         pct_rows = [i for i in hits if "percentages of outlays" in heading_above(i)]
         r.add("TRAP: percentage-of-outlays row identified and excluded",
               bool(pct_rows), "rows %s excluded" % pct_rows)
+
+        # Added 2026-08-21. Row 1 was never inspected, so the two hazards the
+        # registry records for this table - the transposition and the six
+        # projection columns - were both unguarded here.
+        hdr = [str(c).strip() if c is not None else "" for c in rows[1]]
+        yrs = [h for h in hdr if h[:4].isdigit()]
+        est = [h for h in yrs if not h.isdigit()]
+        plain = sorted(int(h) for h in yrs if h.isdigit())
+        r.observed["year_headers"] = len(yrs)
+        r.add("TRAP: transposed - years are COLUMN headers in row 1",
+              len(yrs) > 80,
+              "%d year headers, %s to %s" % (len(yrs), yrs[0], yrs[-1])
+              if yrs else "none found, which is what a parser written for "
+                          "Tables 1.1 and 7.1 would see")
+        r.add("TRAP: projection columns present and labelled", bool(est),
+              "%d estimate headers: %s" % (len(est), est))
+        # Asserted as an invariant rather than against a fixed last-actual
+        # year, so the FY2028 edition does not fail this for being newer.
+        estyr = sorted(int(h[:4]) for h in est)
+        r.add("actual/estimate boundary is clean (every projection is "
+              "later than every actual)",
+              bool(plain) and bool(estyr) and estyr[0] > plain[-1],
+              "actuals end %s, projections begin %s"
+              % (plain[-1] if plain else "-", estyr[0] if estyr else "-"))
+        if len(dollar_rows) == 1:
+            # The workbook uses a ten-period string for missing data. A fetch
+            # that coerces with a bare except would turn those into zeros in a
+            # level series. Assert the chosen row carries none.
+            bad = [c for c in rows[dollar_rows[0]][1:]
+                   if c not in (None, "") and not isinstance(c, (int, float))]
+            r.add("chosen row is free of missing-data sentinels",
+                  not bad, "no non-numeric cells" if not bad
+                  else "%d found: %s" % (len(bad), bad[:3]))
     else:
         hdr = None
         for i, row in enumerate(rows[:8]):
@@ -362,9 +416,44 @@ def verify_omb_table(s: PlannedSeries, env: dict) -> Result:
         r.add("year cells are text, not numbers",
               any(is_text_year(f) for f in firsts),
               "confirmed - a numeric-only parser would return an empty series")
-        r.add("TRAP: Total vs On-Budget receipts columns", None,
-              "NOT CHECKED programmatically - column-span parsing required; "
-              "the registry records that Total is the first numeric column")
+        # Was UNCHECKED until 2026-08-21. Row 2 carries merged span labels
+        # (Total / On-Budget / Off-Budget) and row 3 repeats Receipts /
+        # Outlays / Surplus under each, so "Receipts" names THREE columns.
+        # Forward-fill the spans and select on the pair.
+        span, cur = [], ""
+        for c in rows[2]:
+            cur = str(c).strip().lower() if c not in (None, "") else cur
+            span.append(cur)
+        sub3 = [str(c).strip().lower() if c not in (None, "") else ""
+                for c in rows[3]]
+        def col_for(section):
+            return next((i for i in range(min(len(span), len(sub3)))
+                         if span[i] == section and sub3[i] == "receipts"), None)
+        total_col, onbud_col = col_for("total"), col_for("on-budget")
+        r.observed.update({"total_receipts_col": total_col,
+                           "on_budget_receipts_col": onbud_col})
+        r.add("TRAP: Total receipts column selected by SPAN, not by label",
+              total_col is not None and total_col != onbud_col,
+              "Total/Receipts at %s, On-Budget/Receipts at %s"
+              % (total_col, onbud_col))
+        r.add("matches the registry (first numeric column)", total_col == 1,
+              "registry says the first numeric column; span-based "
+              "selection says %s" % total_col)
+        # Before Social Security went off-budget the two columns are EQUAL,
+        # so an early year cannot discriminate them. Use a late one.
+        late = next((row for row in rows
+                     if str(next((c for c in row if c not in (None, "")), ""))
+                     .strip() == "1990"), None)
+        if late is not None and total_col is not None and onbud_col is not None:
+            tv, ov = late[total_col], late[onbud_col]
+            r.add("the two columns are materially different in FY1990",
+                  isinstance(tv, (int, float)) and isinstance(ov, (int, float))
+                  and tv > ov * 1.15,
+                  "Total %s vs On-Budget %s - On-Budget excludes Social "
+                  "Security and is smaller by %.0f%%"
+                  % (tv, ov, 100.0 * (1 - ov / tv))
+                  if isinstance(tv, (int, float)) and isinstance(ov, (int, float))
+                  and tv else "could not read FY1990")
     r.settle()
     return r
 
@@ -461,9 +550,18 @@ def verify_omb_debt(s: PlannedSeries, env: dict) -> Result:
     if vals:
         r.add("values read as percentages, not dollar millions",
               max(vals) < 500, "max %.1f" % max(vals))
-    r.add("TRAP: projection years trimmed", None,
-          "NOT CHECKED - the FY2027 edition runs past the last actual year; "
-          "trim at the actual/estimate boundary during fetch and record the cut")
+    # Checked live 2026-08-21. Table 7.1 stops at the last ACTUAL fiscal year
+    # and carries no estimate rows, unlike Table 3.1, which runs six of them.
+    # The retracted note here claimed the opposite. Kept as a standing
+    # assertion rather than deleted, because a later edition could begin
+    # publishing projections and this is where that would surface.
+    labels = [str(next((c for c in row if c not in (None, "")), ""))
+              for row in rows]
+    est = [x for x in labels if "estimate" in x.lower()]
+    r.add("TRAP: carries no projection rows to trim (unlike Table 3.1)",
+          not est,
+          "no estimate row labels found"
+          if not est else "found %d: %s" % (len(est), est[:4]))
     r.settle()
     return r
 

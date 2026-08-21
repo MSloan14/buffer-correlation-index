@@ -148,8 +148,13 @@ REGISTRY: list[PlannedSeries] = [
                "smaller but entirely plausible percentage.",
                "Years are TEXT in this workbook, as in Table 1.1. A numeric-only "
                "parser returns an empty series rather than erroring.",
-               "FY2027 edition extends past the last actual year. Trim projections "
-               "and record where the cut fell."],
+               "RETRACTED 2026-08-21, and the retraction matters. This slot "
+               "read \"FY2027 edition extends past the last actual year, trim "
+               "projections\". Read live: Table 7.1 ends at FY2025 and goes "
+               "straight to its footnotes, with NO estimate rows. Only Table "
+               "3.1 carries projections. A false trap is not inert - a fetcher "
+               "told to cut at an actual/estimate boundary that does not exist "
+               "can invent one and silently drop real observations."],
     ),
     PlannedSeries(
         domain=3, key="net_interest", label="Federal net interest outlays",
@@ -162,7 +167,12 @@ REGISTRY: list[PlannedSeries] = [
               "OMB Table 3.1, outlays by superfunction and function. Row 21 "
               "read as 899 (first) to 1,363,769 (last), in millions of dollars. "
               "Projection years must be trimmed at fetch: the file is the FY2027 "
-              "budget edition and extends past the last actual year.",
+              "budget edition and extends past the last actual year. PINNED "
+              "2026-08-21 - row 1 carries 92 year headers, 1940 through 2031 "
+              "estimate, of which the LAST SIX are projections and one (TQ) is "
+              "the 1976 transition quarter. The actual/estimate boundary falls "
+              "after FY2025, matching Tables 1.1 and 7.1, which simply stop "
+              "there. Data cells are numeric; it is the HEADERS that are text.",
         traps=["SEVERE. Table 3.1 contains THREE rows labelled 'Net interest', "
                "distinguished only by a heading several rows above: row 21 in "
                "millions of dollars, row 41 as a percentage of OUTLAYS, row 51 "
@@ -173,8 +183,24 @@ REGISTRY: list[PlannedSeries] = [
                "FY2027 edition extends past the last actual year. Untrimmed, "
                "projection years enter the ratchet detector's sigma and episode "
                "set as if they were observations.",
-               "OMB tables carry a TQ (transition quarter, 1976) row. The "
-               "year-parser drops it, which is correct and deliberate."],
+               "TRANSPOSED. Table 3.1 is laid out the OTHER WAY UP from Tables "
+               "1.1 and 7.1: years run ACROSS row 1 as column headers and "
+               "functions run DOWN column 0. A parser written against the "
+               "sibling tables finds no year rows and returns an empty series "
+               "without erroring. Confirmed live 2026-08-21.",
+               "The missing-data sentinel is ten literal periods, 189 of them "
+               "in this workbook. float() raises on it; a bare except that "
+               "falls back to 0.0 injects fabricated zeros into a level "
+               "series. Skip these cells, never zero-fill.",
+               "In the two percentage sections a bare asterisk means 0.05 "
+               "percent or less, not missing. It does not appear in the "
+               "dollars section this series reads, but it does appear in the "
+               "rows a units check might cross-reference.",
+               "TQ (transition quarter, 1976) is a COLUMN here, not a row - "
+               "the consequence of the transposition above. An isdigit() year "
+               "filter drops it, which is correct, and also drops the six "
+               "estimate headers. Both outcomes are right, but make them "
+               "deliberate: assert what was dropped, do not rely on it."],
     ),
     PlannedSeries(
         domain=3, key="federal_receipts", label="Federal receipts, total",
