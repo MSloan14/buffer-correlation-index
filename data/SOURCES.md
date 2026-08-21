@@ -8,11 +8,11 @@ The data gate is closed. No series in this table has been fetched into
 occurred.
 
 Identity is a separate question from retrieval, and the two are tracked
-separately on purpose. **9 series have had their identity verified**
+separately on purpose. **10 series have had their identity verified**
 against a live response by
 [`verify.py`](../scripts/fetch/verify.py) — the endpoint answers, the
 returned series is the one the spec names, and the source-specific traps
-were checked. 2 more are reachable but unverified, and 2 are Tier 3
+were checked. 1 more are reachable but unverified, and 2 are Tier 3
 transcriptions that cannot be scripted at all. Verifying an identity
 reads metadata and a probe window; it is not the same as admitting the
 series to the study, and it does not open the gate.
@@ -40,7 +40,7 @@ Fetch driver and gate guard: [`../scripts/fetch/fetch_all.py`](../scripts/fetch/
 | 5 | Personal saving rate | BEA NIPA | `NIPA/T20100/line35/A072RC` | Percent | Annual | + | 1 | **verified** | — |
 | 6 | Hospital beds per 1,000 population | OECD Health Statistics | `DSD_HEALTH_REAC_HOSP@DF_BEDS_FUNC / USA.HB.10P3HB._Z._Z._T._T._Z._Z` | Per 1 000 inhabitants | Annual | + | 1 | **verified** | — |
 | 7 | Union membership rate | BLS | `LUU0204899600` | Percent | Annual | + | 1 | **verified** | — |
-| 8 | US grain stocks-to-use (corn, wheat, soybeans) | USDA ERS balance sheets (Feed Grains, Wheat Data, Oil Crops) | `Feed Grains Yearbook (corn) / Wheat Data-All Years / Oil Crops Yearbook (soybeans)` | Ratio (derived) | Annual (marketing year) | + | 1 | *reachable, identity unverified* | — |
+| 8 | US grain stocks-to-use (corn, wheat, soybeans) | USDA ERS balance sheets (Feed Grains, Wheat Data, Oil Crops) | `FGYearbookTable04 (corn) / Table05 all wheat / Table03 soybeans` | Ratio (derived) | Annual (marketing year) | + | 1 | **verified** | — |
 <!-- END GENERATED: series -->
 
 **Orientation** is applied before any other computation: `+` means higher = more
@@ -77,7 +77,7 @@ not match its expectation.
 | Aggregate interest coverage ratio | Cannot be scripted. Requires manual transcription. |
 | US nonfinancial net debt / EBITDA | Cannot be scripted. Requires manual transcription. |
 | Hospital beds per 1,000 population | COVERAGE CLIFF - a data reality, not an identifier problem, and potentially decisive for the headline. US beds data currently ENDS AT 2022. The crisis-excluded third block B3ex is {2018, 2019, 2022, 2023, 2024, 2025}, so beds cover 3 of 6 years = 50 percent, BELOW spec v0.2 section 5's 60-percent block-coverage rule. On today's data domain 6 falls out of the verdict-bearing B3 block entirely. If OECD publishes US 2023 before Phase 3 the figure becomes 4 of 6 = 66.7 percent and it stays in. No route change fixes this; watch it at every OECD health release, and if it does not resolve, report domain 6 as excluded by the coverage rule rather than quietly carrying three points. |
-| US grain stocks-to-use (corn, wheat, soybeans) | Do not improvise a denominator and do not substitute a published stocks-to-use figure for the frozen three-crop construction. The route is now sourced but NOT yet read: only the corn documentation was confirmed to describe a total-disappearance line. Open the wheat and soybean workbooks at gate-open and assert an EXPLICIT total-use column in each before building anything. |
+| US grain stocks-to-use (corn, wheat, soybeans) | Do not improvise a denominator and do not substitute a published stocks-to-use figure for the frozen three-crop construction. |
 | US grain stocks-to-use (corn, wheat, soybeans) | TAIL-YEAR VINTAGE DECISION, unresolved. The Oil Crops Yearbook revises annually in March, so the newest marketing year may exist only in current WASDE/PSD at retrieval. That is a vintage choice and the spec forbids vintage selection - so decide the rule in advance and record it, rather than picking whichever source happens to have the tail year. |
 <!-- END GENERATED: blockers -->
 

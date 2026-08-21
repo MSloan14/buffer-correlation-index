@@ -572,6 +572,139 @@ def _csv_rows(blob: bytes) -> list[dict]:
     return list(csv.DictReader(io.StringIO(text)))
 
 
+# Domain 8. Settled against the workbooks themselves on 2026-08-20, not against
+# their documentation. Each entry is (sheet, url) - the sheet names are stable
+# but the ?v= query string on the URLs is a cache-buster that changes on every
+# ERS release, so it is deliberately omitted.
+ERS_SOURCES = {
+    "corn": ("FGYearbookTable04",
+             "https://www.ers.usda.gov/media/5764/"
+             "feed-grains-yearbook-tables-all-years.xlsx"),
+    "wheat": ("Table05",
+              "https://www.ers.usda.gov/media/5706/wheat-data-all-years.xlsx"),
+    "soybeans": ("Table03",
+                 "https://www.ers.usda.gov/media/5220/"
+                 "all-tables-oil-crops-yearbook.xlsx"),
+}
+
+def verify_ers_grain(s: PlannedSeries, env: dict) -> Result:
+    """Three ERS balance sheets, one per crop.
+
+    Two traps here are severe enough that the route would have produced a
+    plausible wrong answer rather than an error:
+
+    1. The denominator is NOT called the same thing in all three workbooks.
+       Corn says "Total use". Wheat and soybeans say "Total disappearance".
+       A parser matching on "total use" finds it in one of three files.
+    2. Corn and wheat carry QUARTERLY rows interleaved with the marketing-year
+       row. Q4 ending stocks EQUAL the marketing-year ending stocks, so the
+       numerator looks right, while Q4 total use is roughly a quarter of the
+       marketing-year total. Selecting the wrong row inflates stocks-to-use
+       several-fold and nothing about the result looks wrong.
+    """
+    import openpyxl
+
+    r = Result(s.key, "PENDING")
+    need = REQUIRED_FIRST_YEAR.get(s.key)
+    r.observed = {}
+
+    for crop, (sheet, url) in ERS_SOURCES.items():
+        try:
+            wb = openpyxl.load_workbook(io.BytesIO(http(url)), read_only=True,
+                                        data_only=True)
+        except Exception as e:
+            r.add("%s: workbook downloads" % crop, False, str(e)[:120])
+            continue
+        if sheet not in wb.sheetnames:
+            r.add("%s: sheet %s present" % (crop, sheet), False,
+                  "sheets: %s" % wb.sheetnames[:6])
+            continue
+        rows = list(wb[sheet].iter_rows(values_only=True))
+        title = str(rows[0][0] or "")
+        hdr = [str(c).replace("\n", " ").strip().lower() if c is not None else ""
+               for c in rows[1]]
+
+        r.add("%s: sheet titles the right balance sheet" % crop,
+              crop.rstrip("s")[:4] in title.lower()
+              or (crop == "wheat" and "all wheat" in title.lower()),
+              title[:80])
+
+        # The denominator, under whichever name this workbook uses.
+        den = next((i for i, h in enumerate(hdr)
+                    if h.startswith("total use")
+                    or h.startswith("total disappearance")), None)
+        num = next((i for i, h in enumerate(hdr)
+                    if h.startswith("ending stocks")), None)
+        r.add("%s: has an EXPLICIT total-use/disappearance column" % crop,
+              den is not None,
+              "column %s = %r" % (den, hdr[den] if den is not None else None))
+        r.add("%s: has an ending-stocks column" % crop,
+              num is not None,
+              "column %s = %r" % (num, hdr[num] if num is not None else None))
+        if den is None or num is None:
+            continue
+
+        # Marketing-year rows only. Corn/wheat carry a time-period column whose
+        # marketing-year row is labelled MY...; soybeans are annual already.
+        per = next((i for i, h in enumerate(hdr)
+                    if h.startswith("time period") or h.startswith("quarter")), None)
+        my_rows, q_rows, year = [], [], None
+        for row in rows[2:]:
+            first = row[0]
+            if isinstance(first, str) and "/" in first and first[:4].isdigit():
+                year = int(first[:4])
+            if year is None:
+                continue
+            tag = str(row[per] or "") if per is not None else "MY"
+            vals = (row[num] if num < len(row) else None,
+                    row[den] if den < len(row) else None)
+            if not all(isinstance(v, (int, float)) for v in vals):
+                continue
+            (q_rows if per is not None and not tag.strip().upper().startswith("MY")
+             else my_rows).append((year, vals[0], vals[1]))
+
+        r.add("%s: marketing-year rows parse" % crop, len(my_rows) > 20,
+              "%d MY rows, %s to %s" % (len(my_rows),
+                                        my_rows[0][0] if my_rows else "-",
+                                        my_rows[-1][0] if my_rows else "-"))
+        if need and my_rows:
+            r.add("%s: reaches back far enough (needs <= %s)" % (crop, need),
+                  my_rows[0][0] <= need, "first marketing year %s" % my_rows[0][0])
+
+        # Prove the quarterly trap is live rather than asserting it in prose.
+        if q_rows and my_rows:
+            # Compare a year present in BOTH sets. The newest marketing year is
+            # in progress and has no quarterly rows yet, so anchoring on it made
+            # this check silently skip - it reported nothing rather than failing.
+            shared = sorted({y for y, _, _ in my_rows} & {y for y, _, _ in q_rows})
+            yr = shared[-1] if shared else my_rows[-1][0]
+            my_use = next((u for y, _, u in my_rows if y == yr), None)
+            q_use = [u for y, _, u in q_rows if y == yr]
+            if my_use and q_use:
+                r.add("%s: TRAP CONFIRMED LIVE - quarterly total use differs "
+                      "from marketing-year total use" % crop,
+                      max(q_use) < my_use * 0.75,
+                      "MY %s total use %.0f vs largest quarter %.0f - a "
+                      "quarterly row would understate the denominator"
+                      % (yr, my_use, max(q_use)))
+
+        if my_rows:
+            ratios = [n / u for _, n, u in my_rows if u]
+            r.observed["%s_latest_stocks_to_use" % crop] = round(ratios[-1], 4)
+            # The upper bound is 2.0, not 1.0, and that is not slack. US
+            # wheat carryover exceeded a full year's disappearance every year
+            # from 1953 to 1961 under the price-support programs - 1958/59 peaks
+            # at 1.292. A 1.0 bound rejects nine years of real history as a
+            # parsing error, which is the wrong failure: it would send the next
+            # reader hunting for a bug in a correct parser.
+            r.add("%s: stocks-to-use ratios are plausible" % crop,
+                  all(0.005 < x < 2.0 for x in ratios),
+                  "min %.3f max %.3f latest %.3f"
+                  % (min(ratios), max(ratios), ratios[-1]))
+    r.settle()
+    return r
+
+
 def verify_eia_bulk(s: PlannedSeries, env: dict) -> Result:
     """EIA weekly bulk workbook.
 
@@ -870,6 +1003,7 @@ VERIFIERS = {
     # derived them.
     "spr_stocks": verify_eia_bulk,
     "refinery_inputs": verify_eia_bulk,
+    "grain_stocks_use": verify_ers_grain,
     "credit_gap": verify_bis_gap,
     "hospital_beds": verify_oecd_beds,
 }

@@ -397,10 +397,10 @@ REGISTRY: list[PlannedSeries] = [
         label="US grain stocks-to-use (corn, wheat, soybeans)",
         source="USDA ERS balance sheets (Feed Grains, Wheat Data, Oil Crops)",
         route=ERS_FILE,
-        identifier="Feed Grains Yearbook (corn) / Wheat Data-All Years / "
-                   "Oil Crops Yearbook (soybeans)",
+        identifier="FGYearbookTable04 (corn) / Table05 all wheat / "
+                   "Table03 soybeans",
         expect_units="Ratio (derived)", expect_frequency="Annual (marketing year)",
-        orientation=+1, tier="Tier 1", confidence="reachable",
+        orientation=+1, tier="Tier 1", confidence="confirmed",
         notes="Key validated 2026-08-11. Marketing years map to the year in which "
               "they BEGIN (harvest-year convention, Index Spec v0.2 section 3.1). "
               "NASS STRUCTURE CONFIRMED 2026-08-20, and it does NOT supply this "
@@ -450,6 +450,32 @@ REGISTRY: list[PlannedSeries] = [
                "and independently. Kept as a trap because the numerator IS "
                "there, so a future revision could reasonably reach for NASS "
                "again and find half of what it needs.",
+               "THE DENOMINATOR IS NOT CALLED THE SAME THING IN ALL THREE "
+               "WORKBOOKS. Corn Table 4 names the column 'Total use'; wheat "
+               "Table 5 and soybean Table 3 both name it 'Total "
+               "disappearance'. A parser matching on 'total use' finds the "
+               "denominator in one file of three and silently drops two "
+               "crops from a three-crop mean. Confirmed by opening all three "
+               "on 2026-08-20.",
+               "SEVERE, and it fails PLAUSIBLY. Corn and wheat interleave "
+               "QUARTERLY rows with the marketing-year row. Q4 ending stocks "
+               "EQUAL the marketing-year ending stocks, so the numerator "
+               "looks correct, while Q4 total use is roughly a quarter of "
+               "the marketing-year figure - for corn 1975/76, 1,236 against "
+               "5,767. Taking a quarterly row inflates stocks-to-use "
+               "several-fold and nothing in the output looks wrong. Select "
+               "on the marketing-year row label, never on position.",
+               "Wheat classes sit in the SAME workbook as all wheat, on "
+               "adjacent sheets: Table 5 is all wheat, Tables 6 through 11 "
+               "are hard red winter, hard red spring, soft red winter, white "
+               "and durum. All are 'supply and disappearance, million "
+               "bushels'. This is the recorded all-wheat-vs-class trap, and "
+               "the sheets are one click apart.",
+               "The soybean workbook also carries soybean MEAL (Table 4, "
+               "thousand short tons) and soybean OIL (Table 5, thousand "
+               "pounds) as supply-and-disappearance tables. Different "
+               "commodities, different units, adjacent sheets. Table 3 is "
+               "the bean.",
                "ERS discontinued the Feed Grains custom-query application in "
                "May 2025. Since January 2026 only the All Years Excel/CSV "
                "files are posted, so the corn route is a FILE PARSE, not a "
@@ -458,11 +484,7 @@ REGISTRY: list[PlannedSeries] = [
                "retrieval-date logged, NO vintage selection."],
         blockers=["Do not improvise a denominator and do not substitute a "
                   "published stocks-to-use figure for the frozen three-crop "
-                  "construction. The route is now sourced but NOT yet read: "
-                  "only the corn documentation was confirmed to describe a "
-                  "total-disappearance line. Open the wheat and soybean "
-                  "workbooks at gate-open and assert an EXPLICIT total-use "
-                  "column in each before building anything.",
+                  "construction.",
                   "TAIL-YEAR VINTAGE DECISION, unresolved. The Oil Crops "
                   "Yearbook revises annually in March, so the newest marketing "
                   "year may exist only in current WASDE/PSD at retrieval. That "
