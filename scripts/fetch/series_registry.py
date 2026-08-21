@@ -69,7 +69,7 @@ REGISTRY: list[PlannedSeries] = [
         domain=1, key="spr_stocks", label="SPR crude oil stocks",
         source="EIA", route=EIA_BULK, identifier="WCSSTUS1",
         expect_units="Thousand Barrels", expect_frequency="Weekly",
-        orientation=+1, tier="Tier 1", confidence="reachable",
+        orientation=+1, tier="Tier 1", confidence="confirmed",
         notes="SETTLED 2026-08-20. WCSSTUS1 is 'Weekly U.S. Ending Stocks of "
               "Crude Oil in SPR', thousand barrels, 1982-08-20 to current. "
               "Enters the annual index as a calendar-year mean per Index Spec "
@@ -94,7 +94,7 @@ REGISTRY: list[PlannedSeries] = [
         domain=1, key="refinery_inputs", label="Refiner net crude oil input",
         source="EIA", route=EIA_BULK, identifier="WCRRIUS2",
         expect_units="Thousand Barrels per Day", expect_frequency="Weekly",
-        orientation=+1, tier="Tier 1", confidence="reachable", derived=True,
+        orientation=+1, tier="Tier 1", confidence="confirmed", derived=True,
         notes="Denominator only. The coverage ratio is SPR stocks divided by "
               "trailing-12-month mean daily inputs, and is DERIVED here, not "
               "fetched as a series.",

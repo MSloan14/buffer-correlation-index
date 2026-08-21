@@ -572,6 +572,95 @@ def _csv_rows(blob: bytes) -> list[dict]:
     return list(csv.DictReader(io.StringIO(text)))
 
 
+def verify_eia_bulk(s: PlannedSeries, env: dict) -> Result:
+    """EIA weekly bulk workbook.
+
+    Identity rests on the workbook's own Sourcekey cell, not on a title match.
+    The title is checked separately because it carries the two recorded traps:
+    SPR stocks vs total commercial crude stocks, and refiner NET input vs GROSS
+    inputs to distillation units. Both pairs share units and frequency, so a
+    units check cannot separate them and neither can a plausibility range.
+    """
+    try:
+        import xlrd
+    except ImportError:
+        r = Result(s.key, "UNRESOLVED")
+        r.error = ("xlrd is not installed. The EIA bulk file is legacy OLE2/BIFF, "
+                   "which openpyxl cannot read - see requirements.txt")
+        return r
+
+    r = Result(s.key, "PENDING")
+    url = "https://www.eia.gov/dnav/pet/hist_xls/%sw.xls" % s.identifier
+    try:
+        wb = xlrd.open_workbook(file_contents=http(url))
+        sheet = wb.sheet_by_name("Data 1")
+    except Exception as e:
+        r.status = "UNRESOLVED"
+        r.error = str(e)[:200]
+        return r
+
+    def cell(row, col):
+        try:
+            return str(sheet.cell_value(row, col)).strip()
+        except IndexError:
+            return ""
+
+    sourcekey = cell(1, 1)
+    title = cell(0, 1)
+    r.observed = {"sourcekey": sourcekey, "title": title, "rows": sheet.nrows}
+
+    # The decisive check: the workbook names its own series.
+    r.add("workbook's Sourcekey matches the registry identifier",
+          sourcekey == s.identifier,
+          "file says %r, registry says %r" % (sourcekey, s.identifier))
+
+    low = title.lower()
+    if s.key == "spr_stocks":
+        r.add("TRAP: title names the SPR, not commercial crude stocks",
+              "spr" in low and "stocks of crude oil" in low, title)
+    else:
+        r.add("TRAP: title says refiner NET input, not gross inputs",
+              "net input" in low and "gross" not in low, title)
+        r.add("TRAP: it is crude oil, not total inputs or product supplied",
+              "crude oil" in low, title)
+    r.add("title states the expected units",
+          s.expect_units.lower().replace(" per ", " per ") in low,
+          "expected %r" % s.expect_units)
+
+    rows = []
+    for i in range(3, sheet.nrows):
+        d, v = sheet.cell_value(i, 0), sheet.cell_value(i, 1)
+        if isinstance(d, float) and isinstance(v, float):
+            rows.append((d, v))
+    r.add("weekly observations parse", len(rows) > 1000,
+          "%d rows" % len(rows))
+    if rows:
+        first = xlrd.xldate_as_tuple(rows[0][0], wb.datemode)
+        last = xlrd.xldate_as_tuple(rows[-1][0], wb.datemode)
+        r.observed["span"] = "%04d-%02d-%02d to %04d-%02d-%02d" % (
+            first[0], first[1], first[2], last[0], last[1], last[2])
+        need = REQUIRED_FIRST_YEAR.get(s.key)
+        if need:
+            r.add("reaches back far enough for Study 2 (needs <= %s)" % need,
+                  first[0] <= need,
+                  "series begins %04d-%02d-%02d" % first[:3])
+        # Recorded as its own check because the registry's coverage trap asks
+        # for the SPR's late-1970s fill and the WEEKLY series cannot supply it.
+        if s.key == "spr_stocks":
+            r.add("NOTE: weekly route cannot reach the late-1970s fill",
+                  None,
+                  "weekly begins %04d - the monthly MER series MCSSTUS1 reaches "
+                  "Jan 1977. Choose and record weekly-vs-monthly before fetch; "
+                  "this is a route decision, not a defect" % first[0])
+        vals = [v for _, v in rows]
+        r.add("values are in a plausible range for the stated units",
+              all(v > 0 for v in vals) and max(vals) < 1e6,
+              "min %.0f max %.0f, latest %.0f"
+              % (min(vals), max(vals), vals[-1]))
+    r.settle()
+    return r
+
+
 def verify_bis_gap(s: PlannedSeries, env: dict) -> Result:
     """BIS credit-to-GDP GAP, US private non-financial, all lenders.
 
@@ -779,6 +868,8 @@ VERIFIERS = {
     # Added 2026-08-20 once the SDMX keys were settled. These exist so the
     # two routes rest on a live assertion here, not on the report that
     # derived them.
+    "spr_stocks": verify_eia_bulk,
+    "refinery_inputs": verify_eia_bulk,
     "credit_gap": verify_bis_gap,
     "hospital_beds": verify_oecd_beds,
 }

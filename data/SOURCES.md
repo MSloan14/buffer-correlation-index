@@ -8,11 +8,11 @@ The data gate is closed. No series in this table has been fetched into
 occurred.
 
 Identity is a separate question from retrieval, and the two are tracked
-separately on purpose. **7 series have had their identity verified**
+separately on purpose. **9 series have had their identity verified**
 against a live response by
 [`verify.py`](../scripts/fetch/verify.py) — the endpoint answers, the
 returned series is the one the spec names, and the source-specific traps
-were checked. 4 more are reachable but unverified, and 2 are Tier 3
+were checked. 2 more are reachable but unverified, and 2 are Tier 3
 transcriptions that cannot be scripted at all. Verifying an identity
 reads metadata and a probe window; it is not the same as admitting the
 series to the study, and it does not open the gate.
@@ -28,8 +28,8 @@ Fetch driver and gate guard: [`../scripts/fetch/fetch_all.py`](../scripts/fetch/
 <!-- BEGIN GENERATED: series -->
 | Domain | Series | Source | Identifier | Units (expected) | Freq. | Orient. | Tier | Identity | Retrieved |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | Refiner net crude oil input | EIA | `WCRRIUS2` | Thousand Barrels per Day | Weekly | + | 1 | *reachable, identity unverified* | — |
-| 1 | SPR crude oil stocks | EIA | `WCSSTUS1` | Thousand Barrels | Weekly | + | 1 | *reachable, identity unverified* | — |
+| 1 | Refiner net crude oil input | EIA | `WCRRIUS2` | Thousand Barrels per Day | Weekly | + | 1 | **verified** | — |
+| 1 | SPR crude oil stocks | EIA | `WCSSTUS1` | Thousand Barrels | Weekly | + | 1 | **verified** | — |
 | 2 | BIS credit-to-GDP gap, US private non-financial | BIS | `WS_CREDIT_GAP / Q.US.P.A.C` | Percentage points of GDP | Quarterly | **−** | 2 | **verified** | — |
 | 3 | Federal debt held by the public, % of GDP | OMB Historical Tables | `hist07z1 / Table 7.1 / column 8` | Percent of GDP | Annual (FY) | **−** | 1 | **verified** | — |
 | 3 | Federal receipts, total | OMB Historical Tables | `hist01z1 / Table 1.1 / column 'Total Receipts'` | Millions of dollars | Annual (FY) | + | 1 | **verified** | — |
