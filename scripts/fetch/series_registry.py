@@ -301,11 +301,22 @@ REGISTRY: list[PlannedSeries] = [
         source="USDA NASS QuickStats", route=NASS_API, identifier="(query TBD)",
         expect_units="Ratio (derived)", expect_frequency="Annual (marketing year)",
         orientation=+1, tier="Tier 1", confidence="reachable",
-        notes="Key validated 2026-08-11; CORN, WHEAT and SOYBEANS all present in "
-              "the commodity list. The USDA FAS route used on 2026-08-02 stopped "
-              "answering by 2026-08-11, which is why NASS moved from optional to "
-              "required. Marketing years map to the year in which they BEGIN "
-              "(harvest-year convention, Index Spec v0.2 section 3.1).",
+        notes="Key validated 2026-08-11. Marketing years map to the year in which "
+              "they BEGIN (harvest-year convention, Index Spec v0.2 section 3.1). "
+              "NASS STRUCTURE CONFIRMED 2026-08-20, and it does NOT supply this "
+              "domain on its own. Queried live: statisticcat_desc for CORN returns "
+              "46 categories of which exactly one is STOCKS, with NO use, "
+              "disappearance, utilization or supply category anywhere - the "
+              "denominator is simply absent. reference_period_desc for CORN STOCKS "
+              "returns only FIRST OF MAR / JUN / SEP / DEC, so there is NO "
+              "marketing-year ending-stocks period. short_desc returns three "
+              "variants: all positions, OFF FARM, ON FARM. NASS therefore gives a "
+              "QUARTERLY numerator split by position and nothing else, and both "
+              "halves of the recorded trap were real. The denominator needs a "
+              "balance-sheet source; reachable 2026-08-20 are the ERS Feed Grains "
+              "database, the WASDE archive at Cornell ESMIS, and USDA FAS PSD "
+              "(which answered again after refusing connections on 2026-08-11). "
+              "None is settled yet.",
         traps=["Stocks-to-use is DERIVED: ending stocks divided by total use, "
                "per crop, then an unweighted mean of the three ratios. Do not "
                "fetch a published 'stocks to use' figure and assume it matches "
@@ -323,6 +334,13 @@ REGISTRY: list[PlannedSeries] = [
                "route is incomplete and that must be reported, not improvised.",
                "Latest published estimate per marketing year at retrieval, "
                "retrieval-date logged, NO vintage selection."],
+        blockers=["ROUTE INCOMPLETE. NASS supplies the numerator only - quarterly "
+                  "stocks by position - and carries no total-use series at all, "
+                  "confirmed by live query 2026-08-20. A balance-sheet source for "
+                  "the denominator (ERS Feed Grains, WASDE archive, or FAS PSD) "
+                  "must be settled before domain 8 can be built. Do not improvise "
+                  "a denominator and do not substitute a published stocks-to-use "
+                  "figure for the frozen three-crop construction."],
     ),
 ]
 
