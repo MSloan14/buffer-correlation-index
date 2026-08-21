@@ -37,6 +37,31 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from series_registry import REGISTRY, PlannedSeries  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+# Latest acceptable FIRST observation year, per series.
+#
+# These are calibrated to STUDY 2, not to the withdrawn index test. An
+# earlier version asserted "covers 2000-2026", which was the index window;
+# under that bar a series starting in 1995 passed every check and then
+# silently rendered its domain uninformative, because the ratchet criterion
+# needs pre-2000 episodes for the early-vs-late comparison and full history
+# for the episode detector's sigma.
+#
+# A series that starts later than its entry here is not a failure of the
+# fetch. It means that domain cannot support Study 2 and must be reported as
+# such, the way BLS nurses was demoted in the domain-6 decision.
+REQUIRED_FIRST_YEAR = {
+    "debt_held_public": 1960,   # OMB 7.1 offers 1940
+    "net_interest": 1960,       # OMB 3.1 offers 1940
+    "federal_receipts": 1960,   # OMB 1.1 offers single years from 1901
+    "saving_rate": 1960,        # BEA T20100 offers 1929
+    "union_density": 1983,      # CPS-consistent span the spec cites
+    "spr_stocks": 1990,         # SPR fill began in the late 1970s
+    "hospital_beds": 1990,      # OECD reaches further; 1990 leaves an early era
+    "grain_stocks_use": 1990,
+    "credit_gap": 1990,
+}
+
 ENV_FILE = REPO_ROOT / ".env"
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0 Safari/537.36"
 TIMEOUT = 90
@@ -140,8 +165,10 @@ def verify_bea_saving_rate(s: PlannedSeries, env: dict) -> Result:
     r.add("series code A072RC", series_code == "A072RC",
           "got %s" % series_code)
     r.add("annual frequency", True, "Frequency=A requested and returned")
-    r.add("covers the 2000-2026 window", years[0] <= "2000" and years[-1] >= "2024",
-          "%s to %s" % (years[0], years[-1]))
+    need = REQUIRED_FIRST_YEAR.get(s.key)
+    r.add("reaches back far enough for Study 2 (needs <= %s)" % need,
+          int(years[0]) <= need,
+          "first observation %s, last %s" % (years[0], years[-1]))
     r.settle()
     return r
 
@@ -187,6 +214,14 @@ def verify_bls(s: PlannedSeries, env: dict) -> Result:
         plausible = all(0 < v < 50 for v in vals)
         r.add("values in a plausible percent range", plausible,
               "min=%.1f max=%.1f" % (min(vals), max(vals)))
+    need = REQUIRED_FIRST_YEAR.get(s.key)
+    if data and need:
+        first = int(min(d["year"] for d in data))
+        # The probe window is 2005-2024, so this cannot confirm the true start.
+        # Report it as UNCHECKED rather than passing on a window we chose.
+        r.add("reaches back to %s" % need, None,
+              "NOT CHECKED - probe window starts %d; widen the query at fetch "
+              "and fail the series if it cannot reach %s" % (first, need))
     r.settle()
     return r
 
@@ -334,6 +369,105 @@ def verify_omb_table(s: PlannedSeries, env: dict) -> Result:
     return r
 
 
+def verify_omb_debt(s: PlannedSeries, env: dict) -> Result:
+    """Table 7.1: debt held by the public as a percent of GDP.
+
+    Two traps share one shape here. The table carries the SAME sub-headers twice
+    - once under "In Millions of Dollars" and once under "As Percentages of GDP"
+    - and within each, "Held by the Public" splits into Total / Federal Reserve
+      System / Other. So four columns can plausibly answer to "held by the
+    public", in two different units. Selection asserts on the row-1 SECTION
+    header, never on the sub-header alone.
+    """
+    import openpyxl
+
+    r = Result(s.key, "PENDING")
+    url = ("https://www.whitehouse.gov/wp-content/uploads/2026/04/"
+           "hist07z1_fy2027.xlsx")
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(http(url)), read_only=True,
+                                    data_only=True)
+        rows = list(wb[wb.sheetnames[0]].iter_rows(values_only=True))
+    except Exception as e:
+        r.status = "UNRESOLVED"
+        r.error = str(e)[:200]
+        return r
+
+    def cell(row, col):
+        v = rows[row][col] if col < len(rows[row]) else None
+        return str(v).replace("\n", " ").strip() if v else ""
+
+    sect = [cell(1, c) for c in range(len(rows[1]))]
+    sub2 = [cell(2, c) for c in range(len(rows[2]))]
+    sub3 = [cell(3, c) for c in range(len(rows[3]))]
+    r.observed = {"sections": [x for x in sect if x]}
+
+    pct_start = next((c for c, v in enumerate(sect)
+                      if "percentages of gdp" in v.lower()), None)
+    r.add("TRAP: percent-of-GDP section located by ROW-1 header",
+          pct_start is not None, "section begins at column %s" % pct_start)
+    if pct_start is None:
+        r.status = "MISMATCH"
+        return r
+
+    col = next((c for c in range(pct_start, len(sub2))
+                if "held by the public" in sub2[c].lower()), None)
+    if col is not None:
+        while col + 1 < len(sub3) and sub3[col].strip() == "":
+            col += 1
+    r.add("TRAP: 'Held by the Public' column inside that section",
+          col is not None, "column %s" % col)
+    if col is None:
+        r.status = "MISMATCH"
+        return r
+
+    r.add("TRAP: it is the Total sub-column, not Federal Reserve System",
+          sub3[col].lower().startswith("total"),
+          "sub-header reads %r" % sub3[col])
+    r.add("matches the registry (column 8)", col == 8,
+          "registry says 8, header-based selection says %s" % col)
+
+    gross = next((c for c in range(pct_start, len(sub2))
+                  if "gross" in sub2[c].lower()), None)
+    r.add("TRAP: distinguishable from GROSS federal debt",
+          gross is not None and gross != col,
+          "gross at %s, held-by-public at %s" % (gross, col))
+
+    def as_year(v):
+        if isinstance(v, (int, float)) and 1900 < v < 2040:
+            return int(v)
+        if isinstance(v, str):
+            x = v.strip().rstrip("*").strip()
+            if x.isdigit() and 1900 < int(x) < 2040:
+                return int(x)
+        return None
+
+    years, vals = [], []
+    for row in rows:
+        y = as_year(next((c for c in row if c not in (None, "")), None))
+        if y is not None and col < len(row) and isinstance(row[col], (int, float)):
+            years.append(y)
+            vals.append(float(row[col]))
+    r.observed.update({"n": len(years),
+                       "first": min(years) if years else None,
+                       "last": max(years) if years else None})
+    r.add("year cells parse (they are TEXT here)", len(years) > 60,
+          "%d rows, %s to %s" % (len(years), min(years) if years else "-",
+                                 max(years) if years else "-"))
+    need = REQUIRED_FIRST_YEAR.get(s.key)
+    r.add("reaches back far enough for Study 2 (needs <= %s)" % need,
+          bool(years) and min(years) <= need,
+          "first observation %s" % (min(years) if years else "none"))
+    if vals:
+        r.add("values read as percentages, not dollar millions",
+              max(vals) < 500, "max %.1f" % max(vals))
+    r.add("TRAP: projection years trimmed", None,
+          "NOT CHECKED - the FY2027 edition runs past the last actual year; "
+          "trim at the actual/estimate boundary during fetch and record the cut")
+    r.settle()
+    return r
+
+
 def verify_generic_reachable(s: PlannedSeries, env: dict) -> Result:
     """Entries with a host but no settled endpoint.
 
@@ -376,7 +510,11 @@ def verify_generic_reachable(s: PlannedSeries, env: dict) -> Result:
 VERIFIERS = {
     "saving_rate": verify_bea_saving_rate,
     "union_density": verify_bls,
-    "debt_held_public": verify_treasury_debt,
+    # Re-bound 2026-08-20. This pointed at verify_treasury_debt after the
+    # registry moved to OMB Table 7.1, so it reported PASS while checking a
+    # source no longer in use - the precise failure this module exists to
+    # catch, occurring inside the module itself.
+    "debt_held_public": verify_omb_debt,
     "net_interest": verify_omb_table,
     "federal_receipts": verify_omb_table,
 }

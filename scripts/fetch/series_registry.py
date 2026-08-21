@@ -73,7 +73,10 @@ REGISTRY: list[PlannedSeries] = [
               "calendar-year mean per Index Spec v0.2 section 1.",
         traps=["Must be SPR stocks specifically, NOT total US commercial crude "
                "stocks. Both are weekly, both in thousand barrels, and a mixup "
-               "would pass any units check."],
+               "would pass any units check.",
+               "Coverage must reach the SPR's own history (fill began in the "
+               "late 1970s). A route starting in 2000 leaves Study 2 without "
+               "early episodes for this domain."],
     ),
     PlannedSeries(
         domain=1, key="refinery_inputs", label="Refiner net crude oil input",
@@ -84,7 +87,11 @@ REGISTRY: list[PlannedSeries] = [
               "trailing-12-month mean daily inputs, and is DERIVED here, not "
               "fetched as a series.",
         traps=["This is a denominator. It must never be charted or scored as a "
-               "buffer series in its own right."],
+               "buffer series in its own right.",
+               "Refiner NET crude input, GROSS inputs to refineries, and crude "
+               "'product supplied' are three different weekly series in "
+               "thousand barrels per day. Net-vs-gross is an unsettled "
+               "judgement and must be recorded once resolved."],
     ),
 
     # ---- Domain 2: financial -------------------------------------------
@@ -97,33 +104,52 @@ REGISTRY: list[PlannedSeries] = [
         notes="bis.org answers. The specific download path has not been "
               "established. Spec v0.2 section 3.1: PUBLISHED VALUES ONLY. Do "
               "not recompute the one-sided HP filter.",
+        traps=["Gap vs ratio vs trend. BIS publishes the credit-to-GDP RATIO, "
+               "its estimated TREND, and the GAP between them. All three are in "
+               "percent-of-GDP units. Only the GAP is the spec quantity.",
+               "Borrower sector. Total private non-financial is the spec "
+               "quantity; households and nonfinancial corporations publish in "
+               "the same shape. The NFC series is domain 4's fallback, so a "
+               "sector slip either duplicates domain 2 or corrupts both.",
+               "Lender basis. Credit from ALL SECTORS and bank credit only are "
+               "different series in the same units."],
         blockers=["Tier 2 terms of use must be verified before any BIS file is "
                   "committed. Until verified, handle as Tier 3."],
     ),
 
     # ---- Domain 3: fiscal ----------------------------------------------
     PlannedSeries(
-        domain=3, key="debt_held_public", label="Federal debt held by the public",
-        source="Treasury FiscalData", route=TREASURY,
-        identifier="v2/accounting/od/debt_to_penny",
-        expect_units="US Dollars", expect_frequency="Daily",
-        orientation=-1, tier="Tier 1", confidence="reachable", derived=True,
-        notes="API answered on 2026-08-11. Level only; the spec quantity is a "
-              "share of GDP, so this is a numerator requiring a BEA GDP "
-              "denominator.",
-        traps=["THE RECORDED TRAP. The required quantity is debt held by THE "
-               "PUBLIC, not TOTAL public debt (which includes intragovernmental "
-               "holdings and is roughly a quarter larger). Both are dollar "
-               "series named almost identically. verify_registry must assert on "
-               "the field name, not the units."],
-    ),
-    PlannedSeries(
-        domain=3, key="gdp", label="Gross domestic product",
-        source="BEA", route=BEA_API, identifier="NIPA/T10105",
-        expect_units="Millions of dollars", expect_frequency="Annual",
-        orientation=+1, tier="Tier 1", confidence="reachable", derived=True,
-        notes="Denominator for debt/GDP. Table not yet confirmed.",
-        traps=["Denominator only. Never charted or scored as a buffer."],
+        domain=3, key="debt_held_public",
+        label="Federal debt held by the public, % of GDP",
+        source="OMB Historical Tables", route=OMB_XLSX,
+        identifier="hist07z1 / Table 7.1 / column 8",
+        expect_units="Percent of GDP", expect_frequency="Annual (FY)",
+        orientation=-1, tier="Tier 1", confidence="confirmed",
+        coverage="FY1940-2025, 86 annual observations",
+        notes="CONFIRMED 2026-08-20. Replaces the Treasury debt_to_penny route, "
+              "which was the right quantity built the wrong way: a daily dollar "
+              "level divided by BEA calendar-year GDP, starting ~1993. Table 7.1 "
+              "publishes the ratio DIRECTLY as a fiscal-year figure, which is what "
+              "spec v0.2 section 3.1 names (OMB/CBO annual). Read live: 2025 = "
+              "99.5 percent held by the public against 123.3 percent gross. Three "
+              "consequences - no GDP denominator is needed, the FY-vs-CY alignment "
+              "judgement disappears because the published ratio is already "
+              "fiscal-year, and coverage runs from FY1940 instead of ~1993, which "
+              "is what makes pre-2000 episodes available to Study 2 at all.",
+        traps=["THE RECORDED TRAP, still live. Column 6 is GROSS federal debt as a "
+               "percent of GDP; column 8 is HELD BY THE PUBLIC. For 2025 they read "
+               "123.3 and 99.5 - both plausible, both percentages.",
+               "Table 7.1 has TWO sections with IDENTICAL sub-headers: columns 1-5 "
+               "are 'In Millions of Dollars', columns 6-10 are 'As Percentages of "
+               "GDP'. Column 3 and column 8 both read 'Equals: Held by the Public "
+               "/ Total'. Assert on the ROW-1 section header.",
+               "Within 'Held by the Public' the row-3 split is Total / Federal "
+               "Reserve System / Other at columns 8 / 9 / 10. Column 9 is a much "
+               "smaller but entirely plausible percentage.",
+               "Years are TEXT in this workbook, as in Table 1.1. A numeric-only "
+               "parser returns an empty series rather than erroring.",
+               "FY2027 edition extends past the last actual year. Trim projections "
+               "and record where the cut fell."],
     ),
     PlannedSeries(
         domain=3, key="net_interest", label="Federal net interest outlays",
@@ -143,7 +169,12 @@ REGISTRY: list[PlannedSeries] = [
                "as a percentage of GDP. The spec quantity is net interest as a "
                "share of RECEIPTS. Row 41 is already a percentage and would look "
                "correct while carrying an entirely different denominator. Assert "
-               "on the section heading, never on the row label alone."],
+               "on the section heading, never on the row label alone.",
+               "FY2027 edition extends past the last actual year. Untrimmed, "
+               "projection years enter the ratchet detector's sigma and episode "
+               "set as if they were observations.",
+               "OMB tables carry a TQ (transition quarter, 1976) row. The "
+               "year-parser drops it, which is correct and deliberate."],
     ),
     PlannedSeries(
         domain=3, key="federal_receipts", label="Federal receipts, total",
@@ -176,6 +207,42 @@ REGISTRY: list[PlannedSeries] = [
               "mechanical substitution to BIS NFC credit-to-GDP if coverage "
               "falls below 60 percent of any block's usable years.",
         blockers=["Cannot be scripted. Requires manual transcription."],
+    ),
+    PlannedSeries(
+        domain=4, key="corp_coverage", label="Aggregate interest coverage ratio",
+        source="IMF GFSR; S&P summaries", route="(transcription)",
+        identifier="(manual)",
+        expect_units="Ratio", expect_frequency="Annual (sparse)",
+        orientation=+1, tier="Tier 3", confidence="manual",
+        notes="Spec v0.2 section 3.1 sub-series 4b. Section 5 defines domain 4 as "
+              "the unweighted mean of its sub-series z-scores, so 4a alone is HALF "
+              "A DOMAIN. This entry was missing entirely from the 2026-08-11 "
+              "registry and was found by independent review; without it domain 4 "
+              "would have been built short with every check passing. Orientation "
+              "is POSITIVE here and negative on 4a - higher coverage is more "
+              "buffer, higher leverage is less.",
+        blockers=["Cannot be scripted. Requires manual transcription."],
+    ),
+    PlannedSeries(
+        domain=4, key="corp_bis_fallback",
+        label="BIS US nonfinancial-corporations credit-to-GDP (contingency)",
+        source="BIS", route="https://data.bis.org/", identifier="(endpoint TBD)",
+        expect_units="Percent of GDP", expect_frequency="Quarterly",
+        orientation=-1, tier="Tier 2", confidence="reachable",
+        notes="NOT fetched by default. Spec v0.2 section 3.1 carries a MECHANICAL "
+              "substitution: if the corporate domain covers less than 60 percent "
+              "of any analysis block's usable years, domain 4 switches to this for "
+              "the FULL window. Registered so the contingency has a route rather "
+              "than being improvised if it fires.",
+        traps=["If this fires it shares construction with domain 2 (both BIS "
+               "credit-to-GDP), so a nonzero slice of measured co-movement is "
+               "artifactual. Spec makes the drop-corporate sensitivity run "
+               "MANDATORY reporting in that case.",
+               "Sector: NONFINANCIAL CORPORATIONS, not total private "
+               "non-financial. Taking the domain-2 series here silently "
+               "duplicates domain 2."],
+        blockers=["Do not fetch unless the coverage rule has actually fired, and "
+                  "record that it fired."],
     ),
 
     # ---- Domain 5: household -------------------------------------------
@@ -219,6 +286,12 @@ REGISTRY: list[PlannedSeries] = [
               "by a 403 on 2026-08-02; api.bls.gov began answering by "
               "2026-08-11. The registration key lifts the span cap from 10 to "
               "20 years per query.",
+        traps=["'Members of unions' and 'Represented by unions' are different "
+               "BLS series, both percentages, roughly 1.2 points apart, with "
+               "nearly identical identifiers. The spec quantity is MEMBERSHIP.",
+               "Coverage must reach back to 1983, the CPS-consistent span the "
+               "spec cites as the reason this series was chosen over GSS trust. "
+               "Verified only 2005-2024 so far."],
     ),
 
     # ---- Domain 8: food -------------------------------------------------
@@ -236,7 +309,20 @@ REGISTRY: list[PlannedSeries] = [
         traps=["Stocks-to-use is DERIVED: ending stocks divided by total use, "
                "per crop, then an unweighted mean of the three ratios. Do not "
                "fetch a published 'stocks to use' figure and assume it matches "
-               "the frozen construction."],
+               "the frozen construction.",
+               "QUARTERLY Grain Stocks (Dec 1 / Mar 1 / Jun 1 / Sep 1) are not "
+               "marketing-year ENDING stocks. Dec 1 corn stocks are the "
+               "post-harvest peak - a plausible thousand-bushel series that is "
+               "the wrong quantity.",
+               "On-farm and off-farm positions vs all positions.",
+               "DOMESTIC use vs TOTAL use as the denominator. Total is the "
+               "spec quantity.",
+               "All wheat vs a single wheat class.",
+               "The DENOMINATOR may not exist in QuickStats: total use is a "
+               "WASDE/ERS balance-sheet item. If NASS does not carry it the "
+               "route is incomplete and that must be reported, not improvised.",
+               "Latest published estimate per marketing year at retrieval, "
+               "retrieval-date logged, NO vintage selection."],
     ),
 ]
 
